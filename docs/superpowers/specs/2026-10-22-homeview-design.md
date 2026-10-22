@@ -2,65 +2,108 @@
 
 - 작성일: 2026-10-22
 - 상태: 사용자 검토 대기
+- 작성 규칙: STE100 원칙을 한국어에 적용한다 (0절 참조).
+- HTML 뷰: `docs/superpowers/specs/2026-10-22-homeview-design.html`
 - 레이아웃 시안: https://claude.ai/artifact/Ve7YcaVgX3SdXzPt6w4CJx (시안 A 채택)
+
+## 0. 작성 규칙과 용어
+
+### 0.1 작성 규칙
+
+이 문서는 STE100 원칙을 따른다.
+
+1. 문장 하나에 내용 하나만 쓴다.
+2. 절차 문장은 20어절 이하로 쓴다. 설명 문장은 25어절 이하로 쓴다.
+3. 능동태로 쓴다. 주어를 분명히 쓴다.
+4. 절차는 번호 목록으로 쓴다. 단계 하나에 동작 하나만 쓴다.
+5. 용어 하나에 뜻 하나만 쓴다. 0.2의 용어만 사용한다.
+6. "등", "적절히", "필요 시" 같은 모호한 말은 쓰지 않는다.
+
+### 0.2 용어
+
+| 용어 | 뜻 |
+|---|---|
+| 홈서버 | bombo-server. Tailscale IP는 `100.94.174.67`이다. |
+| 앱 | `homeview-app` 컨테이너. 백엔드와 화면 파일을 포함한다. |
+| 프록시 | `docker-socket-proxy` 컨테이너. Docker API 조회만 통과시킨다. |
+| 수집기 | 홈서버의 systemd 타이머와 스크립트. 호스트 정보를 파일로 쓴다. |
+| 출처 | 앱이 데이터를 읽는 곳. Docker, Prometheus, 호스트 파일의 세 개이다. |
+| 호스트 파일 | 수집기가 쓰는 `/var/lib/homeview/host.json`. |
+| 토폴로지 | 노드와 엣지로 된 그래프. 앱이 세 출처를 합쳐서 만든다. |
+| 노드 | 토폴로지의 항목 하나. 예: 컨테이너, 네트워크, 포트. |
+| 엣지 | 두 노드 사이의 관계 하나. 예: 컨테이너가 네트워크에 연결됨. |
+| 노출 범위 | 포트에 접근할 수 있는 범위. 바인딩 주소로 판정한다. |
+| 출처 상태 | 출처마다 하나씩 갖는 값. `OK`, `STALE`, `ERROR` 중 하나이다. |
 
 ## 1. 목적과 범위
 
-홈서버(bombo-server, Tailscale `100.94.174.67`)의 상태와, 서버에 연결된 인프라를 인터랙티브 그래프로 보여주는 **보기 전용** 웹 화면을 만든다.
+### 1.1 목적
 
-**범위에 포함**
-- Docker 토폴로지: compose 프로젝트 → 컨테이너 → 네트워크 · 볼륨 · 포트 관계와 상태(running/exited, health)
-- 리소스 메트릭 오버레이: 기존 Prometheus(cAdvisor, node-exporter)에서 컨테이너별 · 호스트 CPU, 메모리, 디스크의 현재 값
-- 호스트 레벨 서비스: 실행 중인 systemd 서비스, 리스닝 포트와 노출 범위
+앱은 홈서버의 상태를 그래프로 보여준다. 앱은 홈서버에 연결된 인프라도 보여준다. 앱은 보기 전용이다.
 
-**범위에서 제외**
-- 컨테이너 시작 · 중지 · 재시작, 로그 보기, compose 조작 등 모든 제어 기능
-- 앱 자체 인증 (Tailscale IP에만 바인딩하는 것으로 대신함)
-- 메트릭 과거 추이 그래프 (Grafana 링크로 대신함)
-- Tailscale 피어 목록
-- 노출 범위 레인 보기(시안 C): 나중에 추가할 후보
+### 1.2 범위에 포함
+
+1. Docker 토폴로지: compose 프로젝트, 컨테이너, 네트워크, 볼륨, 포트와 그 관계.
+2. 컨테이너 상태: 실행 상태(running, exited)와 health.
+3. 메트릭: 컨테이너와 호스트의 CPU, 메모리, 디스크 현재 값.
+4. 호스트 서비스: 실행 중인 systemd 서비스.
+5. 리스닝 포트: 주소, 소유 프로세스, 노출 범위.
+
+### 1.3 범위에서 제외
+
+1. 제어 기능. 앱은 컨테이너를 시작, 중지, 재시작하지 않는다.
+2. 로그 보기.
+3. 앱 자체 인증. 앱은 Tailscale IP에만 포트를 연다.
+4. 메트릭 추이 그래프. 앱은 Grafana 링크만 준다.
+5. Tailscale 피어 목록.
+6. 노출 범위 레인 보기(시안 C). 10절의 후보이다.
 
 ## 2. 전체 구조
 
+### 2.1 구성도
+
 ```
-[홈서버 호스트]
- ├─ homeview-collector (systemd 타이머, 30초 간격)
- │    ss -tlnp, systemctl 결과 → /var/lib/homeview/host.json
+[홈서버]
+ ├─ 수집기 (systemd 타이머, 30초 간격)
+ │    ss -tlnp 결과와 systemctl 결과 → 호스트 파일
  │
- └─ Docker: compose 프로젝트 "homeview"
-      ├─ docker-socket-proxy ── /var/run/docker.sock (ro)
-      │    CONTAINERS=1, NETWORKS=1, VOLUMES=1, POST=0, 나머지 0
-      │    homeview_internal 네트워크에만 연결, 호스트 포트 없음
+ └─ compose 프로젝트 "homeview"
+      ├─ 프록시 ── /var/run/docker.sock (읽기 전용)
+      │    허용: CONTAINERS, NETWORKS, VOLUMES 조회
+      │    차단: POST, 그 외 모든 API
+      │    네트워크: homeview_internal만. 호스트 포트 없음.
       │
-      └─ homeview-app (Spring Boot + React 정적 파일)
-           ├─ DockerSource     → http://docker-socket-proxy:2375
-           ├─ MetricsSource    → http://prometheus:9090 (monitoring_monitoring 외부 네트워크)
-           ├─ HostSource       → /data/host.json (ro 마운트)
+      └─ 앱 (Spring Boot + React 정적 파일)
+           ├─ DockerSource     → 프록시
+           ├─ MetricsSource    → prometheus:9090
+           ├─ HostSource       → 호스트 파일 (읽기 전용 마운트)
            ├─ TopologyAssembler
-           └─ GET /api/topology + React 화면
-           포트: 100.94.174.67:3001:8080
+           └─ GET /api/topology, 화면
+           포트: 100.94.174.67:3001 → 8080
 ```
 
-**결정 사항**
-- 기존 `~/monitoring` compose는 수정하지 않는다. `monitoring_monitoring` 네트워크에 `external: true`로 참여만 한다.
-- 보기 전용 경계는 두 겹으로 둔다. 하나는 프록시 설정(`POST=0`)이고, 다른 하나는 앱 코드에 GET 요청만 두는 것이다.
-- collector는 `pid: host` 같은 넓은 권한 대신 호스트의 systemd 타이머로 돌린다. 출력은 임시 파일에 쓴 뒤 `mv`로 교체해 원자적으로 바꾼다.
-- 코드는 맥의 `/Users/bombo/Documents/900_PROJECT/999_homeview` 저장소에서 관리하고, 서버에는 이미지와 compose 파일, collector만 배포한다.
+### 2.2 결정 사항
+
+1. 기존 `~/monitoring` compose 파일은 수정하지 않는다. 앱은 `monitoring_monitoring` 네트워크에 외부 네트워크로 연결한다.
+2. 보기 전용 경계는 두 곳에 둔다. 첫째, 프록시가 POST를 차단한다. 둘째, 앱 코드에는 GET 요청만 있다.
+3. 컨테이너에 `pid: host` 권한을 주지 않는다. 수집기가 호스트에서 호스트 정보를 수집한다.
+4. 수집기는 임시 파일에 먼저 쓴다. 그 다음 `mv`로 호스트 파일을 교체한다. 그래서 앱은 반쯤 쓴 파일을 읽지 않는다.
+5. 코드 저장소는 맥의 `/Users/bombo/Documents/900_PROJECT/999_homeview`이다. 홈서버에는 이미지, compose 파일, 수집기만 배포한다.
 
 ## 3. 구성 요소
 
 | 단위 | 책임 | 입력 | 출력 |
 |---|---|---|---|
-| `collector/homeview-collect.sh` | 호스트 정보 수집 | `ss -tlnpH`, `systemctl list-units --type=service --state=running` | `/var/lib/homeview/host.json` |
-| `collector/homeview-collector.{service,timer}` | 30초마다 수집 실행 | — | — |
-| `DockerSource` | Docker 조회 | 프록시 `GET /containers/json?all=1`, `/networks`, `/volumes`, `/containers/{id}/json` | `DockerSnapshot` 또는 실패 |
-| `MetricsSource` | 현재 메트릭 조회 | PromQL instant query | `MetricsSnapshot` 또는 실패 |
-| `HostSource` | 호스트 스냅샷 읽기 | `host.json` | `HostSnapshot` 또는 STALE/실패 |
-| `TopologyAssembler` | 세 출처를 하나의 그래프로 합침 (순수 함수) | 세 스냅샷과 각 상태 | `Topology` |
-| `TopologyController` | `GET /api/topology`, 5초 캐시 | — | JSON |
-| 프론트엔드 | 그래프 · 상세 패널 · 위쪽 바 | `/api/topology` | 화면 |
+| `collector/homeview-collect.sh` | 호스트 정보를 수집한다. | `ss -tlnpH`, `systemctl list-units --type=service --state=running` | 호스트 파일 |
+| `collector/homeview-collector.{service,timer}` | 30초마다 스크립트를 실행한다. | — | — |
+| `DockerSource` | 프록시에서 Docker 정보를 읽는다. | `GET /containers/json?all=1`, `/networks`, `/volumes`, `/containers/{id}/json` | `DockerSnapshot` 또는 실패 |
+| `MetricsSource` | Prometheus에서 현재 메트릭을 읽는다. | PromQL instant query | `MetricsSnapshot` 또는 실패 |
+| `HostSource` | 호스트 파일을 읽는다. | 호스트 파일 | `HostSnapshot`, STALE, 실패 중 하나 |
+| `TopologyAssembler` | 세 스냅샷을 토폴로지 하나로 합친다. 순수 함수이다. | 스냅샷 세 개, 출처 상태 세 개 | `Topology` |
+| `TopologyController` | `GET /api/topology`를 제공한다. 결과를 5초 동안 캐시한다. | — | JSON |
+| 화면 | 그래프, 상세 패널, 위쪽 바를 그린다. | `/api/topology` | 화면 |
 
-### host.json 형식
+### 3.1 호스트 파일 형식
 
 ```json
 {
@@ -75,57 +118,65 @@
 }
 ```
 
-### PromQL
+### 3.2 PromQL
 
-- 컨테이너 CPU %: `sum by (name) (rate(container_cpu_usage_seconds_total{name!=""}[1m])) * 100`
-- 컨테이너 메모리: `container_memory_working_set_bytes{name!=""}`, 제한: `container_spec_memory_limit_bytes{name!=""}`
-- 호스트 CPU %: `100 - avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100`
-- 호스트 메모리: `node_memory_MemTotal_bytes`, `node_memory_MemAvailable_bytes`
-- 호스트 디스크 `/`: `node_filesystem_size_bytes{mountpoint="/"}`, `node_filesystem_avail_bytes{mountpoint="/"}`
-- 가동 시간: `time() - node_boot_time_seconds`
+| 값 | 쿼리 |
+|---|---|
+| 컨테이너 CPU % | `sum by (name) (rate(container_cpu_usage_seconds_total{name!=""}[1m])) * 100` |
+| 컨테이너 메모리 | `container_memory_working_set_bytes{name!=""}` |
+| 컨테이너 메모리 제한 | `container_spec_memory_limit_bytes{name!=""}` |
+| 호스트 CPU % | `100 - avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100` |
+| 호스트 메모리 | `node_memory_MemTotal_bytes`, `node_memory_MemAvailable_bytes` |
+| 호스트 디스크 `/` | `node_filesystem_size_bytes{mountpoint="/"}`, `node_filesystem_avail_bytes{mountpoint="/"}` |
+| 가동 시간 | `time() - node_boot_time_seconds` |
 
 ## 4. 데이터 모델
 
-### 노드
+### 4.1 노드
 
 | kind | id 형식 | 출처 | 주요 속성 |
 |---|---|---|---|
-| `HOST` | `host:<hostname>` | host.json + node-exporter | 가동 시간, CPU · 메모리 · 디스크 |
-| `COMPOSE_PROJECT` | `compose:<project>` | 라벨 `com.docker.compose.project` | compose 파일 경로, 실행 수 / 전체 수 |
-| `CONTAINER` | `container:<name>` | Docker + cAdvisor | 이미지, 상태, health, 가동 시간, CPU %, 메모리 / 제한. `parent`는 compose 노드 (없으면 null) |
+| `HOST` | `host:<hostname>` | 호스트 파일, node-exporter | 가동 시간, CPU, 메모리, 디스크 |
+| `COMPOSE_PROJECT` | `compose:<project>` | 라벨 `com.docker.compose.project` | compose 파일 경로, 실행 수, 전체 수 |
+| `CONTAINER` | `container:<name>` | Docker, cAdvisor | 이미지, 상태, health, 가동 시간, CPU %, 메모리, 메모리 제한 |
 | `NETWORK` | `network:<name>` | Docker | 드라이버, 서브넷 |
-| `VOLUME` | `volume:<name>` 또는 `bind:<host path>` | Docker | named / bind |
-| `HOST_SERVICE` | `service:<unit>` | host.json | active, sub 상태 |
-| `LISTEN_PORT` | `port:<proto>:<address>:<port>` | host.json | 소유 프로세스, 노출 범위 |
+| `VOLUME` | `volume:<name>` 또는 `bind:<host path>` | Docker | named 또는 bind |
+| `HOST_SERVICE` | `service:<unit>` | 호스트 파일 | active 값, sub 값 |
+| `LISTEN_PORT` | `port:<proto>:<address>:<port>` | 호스트 파일 | 소유 프로세스, 노출 범위 |
 
-기본 네트워크인 `host`, `none`과, 연결된 컨테이너가 없는 네트워크는 표시하지 않는다.
+규칙:
 
-### 엣지
+1. `CONTAINER` 노드의 `parent`는 소속 compose 노드이다. 소속이 없으면 `parent`는 null이다.
+2. 앱은 `host` 네트워크와 `none` 네트워크를 표시하지 않는다.
+3. 앱은 연결된 컨테이너가 없는 네트워크를 표시하지 않는다.
+4. 노드 id는 새로고침 후에도 바뀌지 않는다.
 
-| kind | source → target | 속성 |
+### 4.2 엣지
+
+| kind | 시작 → 끝 | 속성 |
 |---|---|---|
 | `NETWORK_ATTACH` | CONTAINER → NETWORK | IP, alias |
-| `MOUNT` | CONTAINER → VOLUME | 컨테이너 경로, ro 여부 |
+| `MOUNT` | CONTAINER → VOLUME | 컨테이너 경로, 읽기 전용 여부 |
 | `PORT_MAPPING` | LISTEN_PORT → CONTAINER | 컨테이너 포트, 노출 범위 |
 | `PORT_OWNER` | LISTEN_PORT → HOST_SERVICE | — |
 
-### 노출 범위 분류
+### 4.3 노출 범위
 
-| 값 | 판정 기준 |
-|---|---|
-| `PUBLIC` | `0.0.0.0`, `::`, `*` |
-| `TAILNET` | `100.64.0.0/10` 또는 `fd7a:115c:a1e0::/48` |
-| `LOCALHOST` | `127.0.0.0/8`, `::1`, `127.0.0.53%lo` 같은 zone 표기 포함 |
-| `INTERNAL` | 호스트 포트 없이 컨테이너가 노출만 한 포트 |
-| `OTHER` | 위에 해당하지 않는 주소 (예: LAN IP) |
+| 값 | 판정 기준 | 표시 색 |
+|---|---|---|
+| `PUBLIC` | `0.0.0.0`, `::`, `*` | 빨강 |
+| `TAILNET` | `100.64.0.0/10`, `fd7a:115c:a1e0::/48` | 파랑 |
+| `LOCALHOST` | `127.0.0.0/8`, `::1`. zone 표기(`127.0.0.53%lo`)를 포함한다. | 보라 |
+| `INTERNAL` | 호스트 포트가 없다. 컨테이너가 포트를 노출만 한다. | 회색 |
+| `OTHER` | 위 네 개에 해당하지 않는 주소. 예: LAN IP. | 주황 |
 
-### 포트 매핑 규칙
+### 4.4 포트 연결 규칙
 
-- `ss`의 소유 프로세스가 `docker-proxy`인 리스너는 Docker 포트 매핑의 `(HostIp, PublicPort)`와 맞춰 해당 컨테이너에 `PORT_MAPPING` 엣지로 잇는다.
-- `unit`이 있는 리스너는 해당 `HOST_SERVICE`에 `PORT_OWNER` 엣지로 잇는다.
-- 소유 프로세스를 알 수 없는 리스너는 `owner: "UNKNOWN"`으로 두고 화면에 "미확인"으로 표시한다.
+1. 소유 프로세스가 `docker-proxy`이면, 앱은 Docker 포트 매핑에서 같은 `(HostIp, PublicPort)`를 찾는다. 앱은 그 컨테이너에 `PORT_MAPPING` 엣지를 만든다.
+2. 리스너에 `unit` 값이 있으면, 앱은 그 서비스에 `PORT_OWNER` 엣지를 만든다.
+3. 소유 프로세스를 모르면, 앱은 `owner`를 `"UNKNOWN"`으로 설정한다. 화면은 "미확인"을 표시한다.
 
-### 응답 예시
+### 4.5 응답 예시
 
 ```json
 {
@@ -149,74 +200,155 @@
 }
 ```
 
-`sources.*.status` 값은 `OK`, `STALE`, `ERROR` 중 하나다.
-
 ## 5. 화면 (시안 A: 그래프 중심)
 
-- **위쪽 바**: 호스트명, CPU · 메모리 · 디스크, 가동 시간, 출처 상태 배지 세 개, "마지막 갱신 n초 전", 새로고침 버튼, 필터(노출 범위, 볼륨 표시 여부, 호스트 서비스 표시 여부)
-- **캔버스**: React Flow 사용. compose 프로젝트는 그룹 노드로 컨테이너를 감싼다. 포트는 노출 범위 색으로 칠한다(PUBLIC 빨강, TAILNET 파랑, LOCALHOST 보라, INTERNAL 회색). 줌과 드래그를 지원한다.
-- **배치**: elkjs layered. 왼쪽에 포트, 가운데에 compose 그룹과 컨테이너, 오른쪽에 네트워크와 볼륨을 둔다. 노드가 새로 생기거나 사라질 때만 다시 배치한다. 드래그한 위치는 localStorage에 저장한다.
-- **상세 패널(오른쪽)**: 선택한 노드의 속성과 연결된 엣지를 보여준다. 컨테이너와 호스트 노드에는 Grafana 링크(`http://100.94.174.67:3000`)를 둔다.
-- **폰 화면(폭 640px 이하)**: 상세 패널이 아래에서 올라오는 시트로 바뀐다.
+### 5.1 위쪽 바
+
+위쪽 바는 다음 항목을 표시한다.
+
+1. 호스트 이름과 가동 시간.
+2. 호스트 CPU, 메모리, 디스크 사용률.
+3. 출처 상태 배지 세 개.
+4. 마지막 갱신 시각("n초 전")과 새로고침 버튼.
+5. 필터 세 개: 노출 범위, 볼륨 표시, 호스트 서비스 표시.
+
+### 5.2 그래프
+
+1. 화면은 React Flow로 그래프를 그린다.
+2. compose 노드는 그룹이다. 그룹은 소속 컨테이너를 감싼다.
+3. 포트 노드는 노출 범위 색으로 표시한다 (4.3 참조).
+4. 사용자는 그래프를 줌하고 드래그할 수 있다.
+
+### 5.3 배치
+
+1. 화면은 elkjs layered 방식으로 노드를 배치한다.
+2. 왼쪽 열은 포트이다. 가운데 열은 compose 그룹과 컨테이너이다. 오른쪽 열은 네트워크와 볼륨이다.
+3. 노드가 추가되거나 제거되면, 화면은 다시 배치한다. 그 외에는 위치를 유지한다.
+4. 사용자가 노드를 드래그하면, 화면은 위치를 localStorage에 저장한다.
+
+### 5.4 상세 패널
+
+1. 사용자가 노드를 선택하면, 오른쪽 패널이 그 노드의 속성을 표시한다.
+2. 패널은 그 노드에 연결된 엣지도 표시한다.
+3. 컨테이너 노드와 호스트 노드의 패널에는 Grafana 링크(`http://100.94.174.67:3000`)가 있다.
+4. 화면 폭이 640px 이하이면, 패널은 화면 아래에서 올라오는 시트로 바뀐다.
 
 ## 6. 갱신과 오류 처리
 
-- 프론트는 15초마다 다시 불러온다. 탭이 숨겨지면 멈추고, 다시 보이면 즉시 한 번 불러온다.
-- 백엔드는 결과를 5초 동안 캐시한다. 출처별 HTTP 타임아웃은 3초이고, 세 출처를 병렬로 조회한다.
-- host.json의 `snapshotAt`이 90초보다 오래되면 STALE로 표시하고, 마지막 스냅샷 데이터를 그대로 쓴다.
+### 6.1 갱신 주기
 
-| 상황 | 백엔드 | 화면 |
+| 주체 | 동작 | 주기 |
 |---|---|---|
-| Docker 프록시 실패 | `docker: ERROR`, Docker 출처 노드 없음 | 빨간 배너, 호스트 노드는 표시 |
-| Prometheus 실패 | `prometheus: ERROR`, metrics null | 수치를 "—"로 표시 |
-| host.json 오래됨 | `host: STALE` | 노란 배지에 "n분 전" 표시 |
-| host.json 없음 · 깨짐 | `host: ERROR`, 호스트 서비스 · 포트 노드 없음 | 빨간 배지 |
-| API 실패 | — | 마지막 그래프를 유지하고 "연결 끊김 · n초 전 데이터" 표시 |
+| 수집기 | 호스트 파일을 다시 쓴다. | 30초 |
+| Prometheus | 메트릭을 수집한다 (기존 설정). | 15초 |
+| 화면 | `/api/topology`를 요청한다. | 15초 |
+| 앱 | 결과를 캐시한다. | 5초 |
+| 앱 | 호스트 파일의 나이를 검사한다. | 요청마다 |
+
+규칙:
+
+1. 탭이 숨겨지면, 화면은 요청을 멈춘다.
+2. 탭이 다시 보이면, 화면은 즉시 한 번 요청한다.
+3. 앱은 세 출처를 병렬로 조회한다.
+4. 출처별 HTTP 타임아웃은 3초이다.
+
+### 6.2 출처 상태 판정
+
+1. 앱이 출처를 조회한다.
+2. 출처가 3초 안에 응답하지 않으면, 출처 상태는 `ERROR`이다.
+3. 응답을 해석하지 못하면, 출처 상태는 `ERROR`이다.
+4. 호스트 파일의 `snapshotAt`이 90초보다 오래되었으면, 출처 상태는 `STALE`이다. 앱은 그 데이터를 계속 사용한다.
+5. 그 외에는 출처 상태가 `OK`이다.
+
+### 6.3 실패 시 동작
+
+| 상황 | 앱의 동작 | 화면의 동작 |
+|---|---|---|
+| 프록시 실패 | `docker`를 `ERROR`로 설정한다. Docker 노드를 만들지 않는다. | 빨간 배너를 표시한다. 호스트 노드는 계속 표시한다. |
+| Prometheus 실패 | `prometheus`를 `ERROR`로 설정한다. metrics를 null로 설정한다. | 수치 자리에 "—"를 표시한다. |
+| 호스트 파일이 오래됨 | `host`를 `STALE`로 설정한다. | 노란 배지에 "n분 전"을 표시한다. |
+| 호스트 파일이 없거나 깨짐 | `host`를 `ERROR`로 설정한다. 서비스 노드와 포트 노드를 만들지 않는다. | 빨간 배지를 표시한다. |
+| API 실패 | — | 마지막 그래프를 유지한다. "연결 끊김 · n초 전 데이터"를 표시한다. |
 
 ## 7. 배포
 
-- compose 프로젝트 이름은 `homeview`이고, 서버 경로는 `~/homeview`로 한다.
-- 네트워크: `homeview_internal`(프록시와 앱), `monitoring_monitoring`(external, 앱만)
-- 포트: `100.94.174.67:3001:8080`
-- 볼륨: `/var/lib/homeview/host.json:/data/host.json:ro`
-- 메모리 제한: 앱 `512m`, 프록시 `64m`
-- 이미지는 맥에서 `linux/amd64`로 빌드한 뒤 `docker save | ssh homeserver docker load`로 옮긴다. 레지스트리는 두지 않는다.
-- collector는 `/usr/local/bin/homeview-collect.sh`와 `/etc/systemd/system/homeview-collector.{service,timer}`에 설치하고 root로 실행한다. 다른 사용자의 소켓 소유 프로세스를 보려면 `ss -p`에 root 권한이 필요하기 때문이다. 출력 파일은 `0644`로 둔다.
+### 7.1 설정 값
+
+| 항목 | 값 |
+|---|---|
+| compose 프로젝트 이름 | `homeview` |
+| 홈서버 경로 | `~/homeview` |
+| 네트워크 | `homeview_internal` (프록시, 앱), `monitoring_monitoring` (external, 앱만) |
+| 포트 | `100.94.174.67:3001:8080` |
+| 마운트 | `/var/lib/homeview/host.json:/data/host.json:ro` |
+| 메모리 제한 | 앱 `512m`, 프록시 `64m` |
+
+### 7.2 이미지 배포 절차
+
+1. 맥에서 `linux/amd64` 이미지를 빌드한다.
+2. `docker save`로 이미지를 저장한다.
+3. 결과를 `ssh homeserver docker load`로 전송한다.
+4. 홈서버에서 `docker compose up -d`를 실행한다.
+
+레지스트리는 사용하지 않는다.
+
+### 7.3 수집기 설치 절차
+
+1. 스크립트를 `/usr/local/bin/homeview-collect.sh`에 복사한다.
+2. 유닛 파일을 `/etc/systemd/system/homeview-collector.service`와 `.timer`에 복사한다.
+3. `systemctl daemon-reload`를 실행한다.
+4. `systemctl enable --now homeview-collector.timer`를 실행한다.
+
+수집기는 root로 실행한다. 다른 사용자의 포트 소유 프로세스를 보려면 `ss -p`에 root 권한이 필요하다. 호스트 파일의 권한은 `0644`이다.
 
 ## 8. 테스트
 
-테스트 코드는 `kotlin-junit5-test.md` 규칙을 따른다. 식별자는 ASCII로 짓고, 한글은 `@DisplayName`에만 쓰며, `@Nested inner class`로 분기를 나눈다.
+### 8.1 규칙
 
-| 대상 | 방식 |
-|---|---|
-| `TopologyAssembler` | 순수 단위 테스트: 그룹핑, 엣지, docker-proxy 포트 매핑, 노출 범위 분류, 미확인 포트, 출처 부분 실패 |
-| `DockerSource`, `MetricsSource` | MockWebServer와 실제 서버에서 떠 온 JSON fixture로 파싱 · 타임아웃 검증 |
-| `HostSource` | 임시 디렉터리로 정상 · 파일 없음 · 깨진 JSON · STALE 검증 |
-| `TopologyController` | `@WebMvcTest` 슬라이스로 응답 형태와 캐시 검증 |
-| collector | `shellcheck`, 서버에서 1회 실행한 결과 확인 |
-| 프론트엔드 | Vitest와 Testing Library로 응답→React Flow 변환, 배지 · 배너, 상세 패널, API 실패 시 마지막 그래프 유지 검증 |
+테스트 코드는 `kotlin-junit5-test.md`를 따른다.
+
+1. 식별자는 ASCII로 쓴다.
+2. 한글은 `@DisplayName`에만 쓴다.
+3. 분기는 `@Nested inner class`로 나눈다.
+
+### 8.2 대상과 방식
+
+| 대상 | 방식 | 검증 항목 |
+|---|---|---|
+| `TopologyAssembler` | 순수 단위 테스트 | 그룹, 엣지, docker-proxy 포트 연결, 노출 범위, 미확인 포트, 출처 부분 실패 |
+| `DockerSource`, `MetricsSource` | MockWebServer. fixture는 홈서버에서 받은 실제 JSON이다. | 파싱, 3초 타임아웃 |
+| `HostSource` | 임시 디렉터리 | 정상, 파일 없음, 깨진 JSON, STALE |
+| `TopologyController` | `@WebMvcTest` 슬라이스 | 응답 형태, 5초 캐시 |
+| 수집기 | `shellcheck`, 홈서버에서 1회 실행 | 문법, 출력 형식 |
+| 화면 | Vitest, Testing Library | 응답 변환, 배지, 배너, 상세 패널, API 실패 시 마지막 그래프 유지 |
 
 레이아웃 좌표는 테스트하지 않는다.
 
-**품질 게이트**: `./gradlew build`(테스트와 kotlinter 포함), `npm run typecheck && npm run lint && npm run test && npm run build`
+### 8.3 품질 게이트
+
+1. `./gradlew build`를 실행한다. 이 명령은 테스트와 kotlinter를 포함한다.
+2. `npm run typecheck`를 실행한다.
+3. `npm run lint`를 실행한다.
+4. `npm run test`를 실행한다.
+5. `npm run build`를 실행한다.
 
 ## 9. 인수 기준 (EARS)
 
-- **AC-01**: 사용자가 tailnet 기기에서 `http://100.94.174.67:3001`을 열면, 시스템은 모든 compose 프로젝트와 그 컨테이너를 그룹으로 묶은 그래프를 보여주어야 한다.
-- **AC-02**: 시스템은 각 컨테이너 노드에 상태(running/exited 등)와 health를 표시해야 한다.
-- **AC-03**: 시스템은 각 컨테이너를 연결된 네트워크와 마운트된 볼륨에 엣지로 이어야 한다.
-- **AC-04**: 호스트 포트가 컨테이너에 매핑되어 있으면, 시스템은 해당 리스닝 포트 노드를 컨테이너와 잇고 노출 범위(PUBLIC/TAILNET/LOCALHOST/INTERNAL/OTHER)를 색으로 표시해야 한다.
-- **AC-05**: 시스템은 실행 중인 systemd 서비스와, 그 서비스가 연 리스닝 포트를 표시해야 한다.
-- **AC-06**: Prometheus가 응답하면, 시스템은 컨테이너별 CPU % · 메모리와 호스트 CPU · 메모리 · 디스크 사용률을 표시해야 한다.
-- **AC-07**: 사용자가 노드를 선택하면, 시스템은 상세 패널에 해당 노드의 속성과 연결 관계를 표시해야 한다.
-- **AC-08**: 화면이 보이는 동안, 시스템은 15초마다 데이터를 갱신하고 마지막 갱신 시각을 표시해야 한다.
-- **AC-09**: 한 출처가 실패하면, 시스템은 나머지 출처의 정보를 계속 표시하고 실패한 출처를 배지로 알려야 한다.
-- **AC-10**: host.json이 90초보다 오래되면, 시스템은 호스트 출처를 STALE로 표시해야 한다.
-- **AC-11**: 시스템은 Docker 상태를 바꾸는 요청을 보내지 않아야 하며, 프록시는 앱이 보낸 POST/DELETE 요청을 거부(403)해야 한다.
-- **AC-12**: 시스템은 Tailscale IP 이외의 호스트 인터페이스에서 접근할 수 없어야 한다.
+- **AC-01**: 사용자가 tailnet 기기에서 `http://100.94.174.67:3001`을 열면, 앱은 compose 프로젝트별로 컨테이너를 묶은 그래프를 표시해야 한다.
+- **AC-02**: 앱은 각 컨테이너 노드에 실행 상태와 health를 표시해야 한다.
+- **AC-03**: 앱은 각 컨테이너를 연결된 네트워크와 마운트된 볼륨에 엣지로 이어야 한다.
+- **AC-04**: 호스트 포트가 컨테이너에 매핑되어 있으면, 앱은 포트 노드를 그 컨테이너에 잇고 노출 범위 색을 표시해야 한다.
+- **AC-05**: 앱은 실행 중인 systemd 서비스와 그 서비스의 리스닝 포트를 표시해야 한다.
+- **AC-06**: Prometheus가 응답하면, 앱은 컨테이너별 CPU %와 메모리를 표시해야 한다. 앱은 호스트 CPU, 메모리, 디스크 사용률도 표시해야 한다.
+- **AC-07**: 사용자가 노드를 선택하면, 앱은 상세 패널에 그 노드의 속성과 연결 관계를 표시해야 한다.
+- **AC-08**: 화면이 보이는 동안, 앱은 15초마다 데이터를 갱신해야 한다. 앱은 마지막 갱신 시각을 표시해야 한다.
+- **AC-09**: 출처 하나가 실패하면, 앱은 나머지 출처의 정보를 계속 표시해야 한다. 앱은 실패한 출처를 배지로 표시해야 한다.
+- **AC-10**: 호스트 파일이 90초보다 오래되면, 앱은 호스트 출처를 `STALE`로 표시해야 한다.
+- **AC-11**: 앱은 Docker 상태를 바꾸는 요청을 보내지 않아야 한다. 프록시는 POST 요청과 DELETE 요청에 403을 반환해야 한다.
+- **AC-12**: 앱은 Tailscale IP 이외의 인터페이스에서 접근할 수 없어야 한다.
 
-## 10. 나중에 할 일 (이번 범위 아님)
+## 10. 후보 (이번 범위 아님)
 
-- 노출 범위 레인 보기(시안 C)
-- Tailscale 피어 표시
-- 이상 상태(컨테이너 exited, PUBLIC 포트 신규 등장) 알림
+1. 노출 범위 레인 보기 (시안 C).
+2. Tailscale 피어 표시.
+3. 이상 상태 알림. 예: 컨테이너가 exited로 바뀜, 새 PUBLIC 포트가 생김.
