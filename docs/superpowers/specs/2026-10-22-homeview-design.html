@@ -1,0 +1,703 @@
+<title>Homeview 설계 SPEC-HV-001</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* 레이아웃: 넓은 화면은 왼쪽 고정 목차 + 본문 한 열, 좁은 화면은 목차를 본문 위로 접음. 흐름은 canvas 도면 */
+:root{
+  --bg:#f2f4f6; --paper:#ffffff; --sunk:#e9edf1; --line:#cfd7df; --fg:#18222c; --muted:#5a6977;
+  --accent:#1f5fbf; --accent-soft:#dde8f8;
+  --ok:#1f7a45; --ok-soft:#dcf1e4; --warn:#94650a; --warn-soft:#fbefcf; --err:#b42828; --err-soft:#fbe0e0;
+  --pub:#b42828; --tn:#1f5fbf; --lh:#5a47b0; --int:#66737f; --oth:#b8620f;
+  --c-docker:#1f5fbf; --c-prom:#b8620f; --c-host:#1f7a45;
+  --sans:"IBM Plex Sans KR",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1418; --paper:#161d23; --sunk:#11171c; --line:#2d3842; --fg:#dde4ea; --muted:#8e9daa;
+  --accent:#78acff; --accent-soft:#1b2c45;
+  --ok:#7fd8a0; --ok-soft:#173a26; --warn:#f0c766; --warn-soft:#3d3010; --err:#ff9b9b; --err-soft:#45191b;
+  --pub:#ff8f8f; --tn:#78acff; --lh:#b8adff; --int:#9aa7b3; --oth:#f4a95c;
+  --c-docker:#78acff; --c-prom:#f4a95c; --c-host:#7fd8a0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1418; --paper:#161d23; --sunk:#11171c; --line:#2d3842; --fg:#dde4ea; --muted:#8e9daa;
+  --accent:#78acff; --accent-soft:#1b2c45;
+  --ok:#7fd8a0; --ok-soft:#173a26; --warn:#f0c766; --warn-soft:#3d3010; --err:#ff9b9b; --err-soft:#45191b;
+  --pub:#ff8f8f; --tn:#78acff; --lh:#b8adff; --int:#9aa7b3; --oth:#f4a95c;
+  --c-docker:#78acff; --c-prom:#f4a95c; --c-host:#7fd8a0; color-scheme:dark}
+
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.65}
+.shell{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:24px 64px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:32px;align-items:start}
+@media (max-width:960px){.shell{grid-template-columns:minmax(0,1fr)}}
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);font-size:13px;display:grid;gap:2px}
+nav.toc a{color:var(--muted);text-decoration:none;padding:3px 8px;border-left:2px solid transparent}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--fg);border-left-color:var(--accent);outline:none}
+nav.toc .h{font-size:11px;letter-spacing:.08em;color:var(--muted);padding:0 8px 6px;text-transform:uppercase}
+@media (max-width:960px){nav.toc{position:static;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px}nav.toc .h{grid-column:1/-1}}
+main{display:grid;gap:40px;min-width:0}
+header.doc{display:grid;gap:10px;border-bottom:1px solid var(--line);padding-bottom:20px}
+.docid{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.04em}
+h1{font-size:2rem;line-height:1.2;margin:0;text-wrap:balance}
+h2{font-size:1.35rem;margin:0;text-wrap:balance;display:flex;gap:10px;align-items:baseline}
+h2 .no{font-family:var(--mono);color:var(--accent);font-size:1rem}
+h3{font-size:1.02rem;margin:8px 0 0}
+section{display:grid;gap:14px;min-width:0;scroll-margin-top:16px}
+p{margin:0;max-width:68ch}
+ol,ul{margin:0;padding-left:22px;display:grid;gap:4px;max-width:72ch}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted)}
+.meta b{color:var(--fg);font-weight:500}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--sunk);border:1px solid var(--line);border-radius:4px;padding:0 4px;word-break:break-word}
+pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px;overflow-x:auto}
+pre code{background:none;border:0;padding:0;font-size:inherit}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;background:var(--sunk);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.chip{display:inline-block;font-family:var(--mono);font-size:11.5px;border-radius:99px;padding:0 8px;border:1px solid currentColor;white-space:nowrap}
+.pub{color:var(--pub)}.tn{color:var(--tn)}.lh{color:var(--lh)}.int{color:var(--int)}.oth{color:var(--oth)}
+.s-ok{color:var(--ok)}.s-st{color:var(--warn)}.s-er{color:var(--err)}
+.note{background:var(--accent-soft);border-radius:8px;padding:12px 14px;font-size:14px;max-width:none}
+.ac{display:grid;gap:8px}
+.ac div{display:grid;grid-template-columns:64px minmax(0,1fr);gap:10px;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14px}
+.ac b{font-family:var(--mono);color:var(--accent);font-size:13px}
+
+/* 도면 */
+figure{margin:0;display:grid;gap:8px;min-width:0}
+.fig{background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
+.fig canvas{display:block;width:100%;min-width:680px;height:auto}
+figcaption{font-size:13px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+figcaption b{color:var(--fg);font-weight:600}
+.ctrl{display:flex;gap:6px;flex-wrap:wrap}
+.ctrl button{font:inherit;font-size:12.5px;color:var(--fg);background:var(--paper);border:1px solid var(--line);border-radius:99px;padding:3px 12px;cursor:pointer}
+.ctrl button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+.ctrl button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+</style>
+
+<div class="shell">
+<nav class="toc" aria-label="목차">
+  <div class="h">목차</div>
+  <a href="#s0">0 작성 규칙과 용어</a>
+  <a href="#s1">1 목적과 범위</a>
+  <a href="#s2">2 전체 구조</a>
+  <a href="#s3">3 구성 요소</a>
+  <a href="#s4">4 데이터 모델</a>
+  <a href="#s5">5 화면</a>
+  <a href="#s6">6 갱신과 오류 처리</a>
+  <a href="#s7">7 배포</a>
+  <a href="#s8">8 테스트</a>
+  <a href="#s9">9 인수 기준</a>
+  <a href="#s10">10 후보</a>
+</nav>
+
+<main>
+<header class="doc">
+  <span class="docid">SPEC-HV-001 · STE100 원칙 적용</span>
+  <h1>Homeview 설계</h1>
+  <p>앱은 홈서버의 상태와 연결된 인프라를 그래프로 보여준다. 앱은 보기 전용이다.</p>
+  <div class="meta">
+    <span>작성일 <b>2026-10-22</b></span>
+    <span>상태 <b>사용자 검토 대기</b></span>
+    <span>대상 <b>bombo-server · <TAILNET_IP></b></span>
+    <span>레이아웃 <a href="https://claude.ai/artifact/Ve7YcaVgX3SdXzPt6w4CJx">시안 A 채택</a></span>
+  </div>
+</header>
+
+<!-- 0 -->
+<section id="s0">
+  <h2><span class="no">0</span>작성 규칙과 용어</h2>
+  <h3>0.1 작성 규칙</h3>
+  <p>이 문서는 STE100 원칙을 따른다.</p>
+  <ol>
+    <li>문장 하나에 내용 하나만 쓴다.</li>
+    <li>절차 문장은 20어절 이하로 쓴다. 설명 문장은 25어절 이하로 쓴다.</li>
+    <li>능동태로 쓴다. 주어를 분명히 쓴다.</li>
+    <li>절차는 번호 목록으로 쓴다. 단계 하나에 동작 하나만 쓴다.</li>
+    <li>용어 하나에 뜻 하나만 쓴다. 0.2의 용어만 사용한다.</li>
+    <li>"등", "적절히", "필요 시" 같은 모호한 말은 쓰지 않는다.</li>
+  </ol>
+  <h3>0.2 용어</h3>
+  <div class="tbl"><table>
+    <tr><th>용어</th><th>뜻</th></tr>
+    <tr><td>홈서버</td><td>bombo-server. Tailscale IP는 <code><TAILNET_IP></code>이다.</td></tr>
+    <tr><td>앱</td><td><code>homeview-app</code> 컨테이너. 백엔드와 화면 파일을 포함한다.</td></tr>
+    <tr><td>프록시</td><td><code>docker-socket-proxy</code> 컨테이너. Docker API 조회만 통과시킨다.</td></tr>
+    <tr><td>수집기</td><td>홈서버의 systemd 타이머와 스크립트. 호스트 정보를 파일로 쓴다.</td></tr>
+    <tr><td>출처</td><td>앱이 데이터를 읽는 곳. Docker, Prometheus, 호스트 파일의 세 개이다.</td></tr>
+    <tr><td>호스트 파일</td><td>수집기가 쓰는 <code>/var/lib/homeview/host.json</code>.</td></tr>
+    <tr><td>토폴로지</td><td>노드와 엣지로 된 그래프. 앱이 세 출처를 합쳐서 만든다.</td></tr>
+    <tr><td>노드</td><td>토폴로지의 항목 하나. 예: 컨테이너, 네트워크, 포트.</td></tr>
+    <tr><td>엣지</td><td>두 노드 사이의 관계 하나. 예: 컨테이너가 네트워크에 연결됨.</td></tr>
+    <tr><td>노출 범위</td><td>포트에 접근할 수 있는 범위. 바인딩 주소로 판정한다.</td></tr>
+    <tr><td>출처 상태</td><td>출처마다 하나씩 갖는 값. <span class="chip s-ok">OK</span> <span class="chip s-st">STALE</span> <span class="chip s-er">ERROR</span> 중 하나이다.</td></tr>
+  </table></div>
+</section>
+
+<!-- 1 -->
+<section id="s1">
+  <h2><span class="no">1</span>목적과 범위</h2>
+  <h3>1.1 목적</h3>
+  <p>앱은 홈서버의 상태를 그래프로 보여준다. 앱은 홈서버에 연결된 인프라도 보여준다. 앱은 보기 전용이다.</p>
+  <h3>1.2 범위에 포함</h3>
+  <ol>
+    <li>Docker 토폴로지: compose 프로젝트, 컨테이너, 네트워크, 볼륨, 포트와 그 관계.</li>
+    <li>컨테이너 상태: 실행 상태(running, exited)와 health.</li>
+    <li>메트릭: 컨테이너와 호스트의 CPU, 메모리, 디스크 현재 값.</li>
+    <li>호스트 서비스: 실행 중인 systemd 서비스.</li>
+    <li>리스닝 포트: 주소, 소유 프로세스, 노출 범위.</li>
+  </ol>
+  <h3>1.3 범위에서 제외</h3>
+  <ol>
+    <li>제어 기능. 앱은 컨테이너를 시작, 중지, 재시작하지 않는다.</li>
+    <li>로그 보기.</li>
+    <li>앱 자체 인증. 앱은 Tailscale IP에만 포트를 연다.</li>
+    <li>메트릭 추이 그래프. 앱은 Grafana 링크만 준다.</li>
+    <li>Tailscale 피어 목록.</li>
+    <li>노출 범위 레인 보기(시안 C). 10절의 후보이다.</li>
+  </ol>
+</section>
+
+<!-- 2 -->
+<section id="s2">
+  <h2><span class="no">2</span>전체 구조</h2>
+  <h3>2.1 데이터 흐름</h3>
+  <p>세 출처의 데이터가 앱으로 들어온다. 앱은 데이터를 토폴로지 하나로 합친다. 화면은 15초마다 토폴로지를 요청한다.</p>
+  <figure>
+    <div class="fig"><canvas id="cv-flow" role="img" aria-label="데이터 흐름도. Docker 소켓은 프록시를 거쳐 DockerSource로, cAdvisor와 node-exporter는 Prometheus를 거쳐 MetricsSource로, 수집기는 호스트 파일을 거쳐 HostSource로 간다. 세 Source는 TopologyAssembler로 합쳐지고, TopologyController가 5초 캐시 후 화면에 보낸다. 앱이 프록시에 보내는 POST는 403으로 차단된다."></canvas></div>
+    <figcaption>
+      <span class="legend"><span><i style="background:var(--c-docker)"></i>Docker 출처</span><span><i style="background:var(--c-prom)"></i>Prometheus 출처</span><span><i style="background:var(--c-host)"></i>호스트 파일 출처</span><span><i style="background:var(--err)"></i>차단된 요청</span></span>
+    </figcaption>
+  </figure>
+  <h3>2.2 결정 사항</h3>
+  <ol>
+    <li>기존 <code>~/monitoring</code> compose 파일은 수정하지 않는다. 앱은 <code>monitoring_monitoring</code> 네트워크에 외부 네트워크로 연결한다.</li>
+    <li>보기 전용 경계는 두 곳에 둔다. 첫째, 프록시가 POST를 차단한다. 둘째, 앱 코드에는 GET 요청만 있다.</li>
+    <li>컨테이너에 <code>pid: host</code> 권한을 주지 않는다. 수집기가 호스트에서 호스트 정보를 수집한다.</li>
+    <li>수집기는 임시 파일에 먼저 쓴다. 그 다음 <code>mv</code>로 호스트 파일을 교체한다. 그래서 앱은 반쯤 쓴 파일을 읽지 않는다.</li>
+    <li>코드 저장소는 맥의 <code>/Users/bombo/Documents/900_PROJECT/999_homeview</code>이다. 홈서버에는 이미지, compose 파일, 수집기만 배포한다.</li>
+  </ol>
+</section>
+
+<!-- 3 -->
+<section id="s3">
+  <h2><span class="no">3</span>구성 요소</h2>
+  <div class="tbl"><table>
+    <tr><th>단위</th><th>책임</th><th>입력</th><th>출력</th></tr>
+    <tr><td><code>homeview-collect.sh</code></td><td>호스트 정보를 수집한다.</td><td><code>ss -tlnpH</code>, <code>systemctl list-units --type=service --state=running</code></td><td>호스트 파일</td></tr>
+    <tr><td><code>homeview-collector.{service,timer}</code></td><td>30초마다 스크립트를 실행한다.</td><td>—</td><td>—</td></tr>
+    <tr><td><code>DockerSource</code></td><td>프록시에서 Docker 정보를 읽는다.</td><td><code>GET /containers/json?all=1</code>, <code>/networks</code>, <code>/volumes</code>, <code>/containers/{id}/json</code></td><td><code>DockerSnapshot</code> 또는 실패</td></tr>
+    <tr><td><code>MetricsSource</code></td><td>Prometheus에서 현재 메트릭을 읽는다.</td><td>PromQL instant query</td><td><code>MetricsSnapshot</code> 또는 실패</td></tr>
+    <tr><td><code>HostSource</code></td><td>호스트 파일을 읽는다.</td><td>호스트 파일</td><td><code>HostSnapshot</code>, STALE, 실패 중 하나</td></tr>
+    <tr><td><code>TopologyAssembler</code></td><td>세 스냅샷을 토폴로지 하나로 합친다. 순수 함수이다.</td><td>스냅샷 세 개, 출처 상태 세 개</td><td><code>Topology</code></td></tr>
+    <tr><td><code>TopologyController</code></td><td><code>GET /api/topology</code>를 제공한다. 결과를 5초 동안 캐시한다.</td><td>—</td><td>JSON</td></tr>
+    <tr><td>화면</td><td>그래프, 상세 패널, 위쪽 바를 그린다.</td><td><code>/api/topology</code></td><td>화면</td></tr>
+  </table></div>
+  <h3>3.1 호스트 파일 형식</h3>
+<pre><code>{
+  "snapshotAt": "2026-10-22T10:00:00+09:00",
+  "hostname": "bombo-server",
+  "listeners": [
+    { "proto": "tcp", "address": "0.0.0.0", "port": 22, "process": "sshd", "pid": 1234, "unit": "ssh.service" }
+  ],
+  "services": [
+    { "unit": "tailscaled.service", "active": "active", "sub": "running" }
+  ]
+}</code></pre>
+  <h3>3.2 PromQL</h3>
+  <div class="tbl"><table>
+    <tr><th>값</th><th>쿼리</th></tr>
+    <tr><td>컨테이너 CPU %</td><td><code>sum by (name) (rate(container_cpu_usage_seconds_total{name!=""}[1m])) * 100</code></td></tr>
+    <tr><td>컨테이너 메모리</td><td><code>container_memory_working_set_bytes{name!=""}</code></td></tr>
+    <tr><td>컨테이너 메모리 제한</td><td><code>container_spec_memory_limit_bytes{name!=""}</code></td></tr>
+    <tr><td>호스트 CPU %</td><td><code>100 - avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100</code></td></tr>
+    <tr><td>호스트 메모리</td><td><code>node_memory_MemTotal_bytes</code>, <code>node_memory_MemAvailable_bytes</code></td></tr>
+    <tr><td>호스트 디스크 /</td><td><code>node_filesystem_size_bytes{mountpoint="/"}</code>, <code>node_filesystem_avail_bytes{mountpoint="/"}</code></td></tr>
+    <tr><td>가동 시간</td><td><code>time() - node_boot_time_seconds</code></td></tr>
+  </table></div>
+</section>
+
+<!-- 4 -->
+<section id="s4">
+  <h2><span class="no">4</span>데이터 모델</h2>
+  <h3>4.1 노드</h3>
+  <div class="tbl"><table>
+    <tr><th>kind</th><th>id 형식</th><th>출처</th><th>주요 속성</th></tr>
+    <tr><td><code>HOST</code></td><td><code>host:&lt;hostname&gt;</code></td><td>호스트 파일, node-exporter</td><td>가동 시간, CPU, 메모리, 디스크</td></tr>
+    <tr><td><code>COMPOSE_PROJECT</code></td><td><code>compose:&lt;project&gt;</code></td><td>라벨 <code>com.docker.compose.project</code></td><td>compose 파일 경로, 실행 수, 전체 수</td></tr>
+    <tr><td><code>CONTAINER</code></td><td><code>container:&lt;name&gt;</code></td><td>Docker, cAdvisor</td><td>이미지, 상태, health, 가동 시간, CPU %, 메모리, 메모리 제한</td></tr>
+    <tr><td><code>NETWORK</code></td><td><code>network:&lt;name&gt;</code></td><td>Docker</td><td>드라이버, 서브넷</td></tr>
+    <tr><td><code>VOLUME</code></td><td><code>volume:&lt;name&gt;</code> 또는 <code>bind:&lt;host path&gt;</code></td><td>Docker</td><td>named 또는 bind</td></tr>
+    <tr><td><code>HOST_SERVICE</code></td><td><code>service:&lt;unit&gt;</code></td><td>호스트 파일</td><td>active 값, sub 값</td></tr>
+    <tr><td><code>LISTEN_PORT</code></td><td><code>port:&lt;proto&gt;:&lt;address&gt;:&lt;port&gt;</code></td><td>호스트 파일</td><td>소유 프로세스, 노출 범위</td></tr>
+  </table></div>
+  <ol>
+    <li><code>CONTAINER</code> 노드의 <code>parent</code>는 소속 compose 노드이다. 소속이 없으면 <code>parent</code>는 null이다.</li>
+    <li>앱은 <code>host</code> 네트워크와 <code>none</code> 네트워크를 표시하지 않는다.</li>
+    <li>앱은 연결된 컨테이너가 없는 네트워크를 표시하지 않는다.</li>
+    <li>노드 id는 새로고침 후에도 바뀌지 않는다.</li>
+  </ol>
+  <h3>4.2 엣지</h3>
+  <div class="tbl"><table>
+    <tr><th>kind</th><th>시작 → 끝</th><th>속성</th></tr>
+    <tr><td><code>NETWORK_ATTACH</code></td><td>CONTAINER → NETWORK</td><td>IP, alias</td></tr>
+    <tr><td><code>MOUNT</code></td><td>CONTAINER → VOLUME</td><td>컨테이너 경로, 읽기 전용 여부</td></tr>
+    <tr><td><code>PORT_MAPPING</code></td><td>LISTEN_PORT → CONTAINER</td><td>컨테이너 포트, 노출 범위</td></tr>
+    <tr><td><code>PORT_OWNER</code></td><td>LISTEN_PORT → HOST_SERVICE</td><td>—</td></tr>
+  </table></div>
+  <h3>4.3 노출 범위</h3>
+  <div class="tbl"><table>
+    <tr><th>값</th><th>판정 기준</th><th>홈서버의 현재 예</th></tr>
+    <tr><td><span class="chip pub">PUBLIC</span></td><td><code>0.0.0.0</code>, <code>::</code>, <code>*</code></td><td><code>0.0.0.0:22</code> ssh</td></tr>
+    <tr><td><span class="chip tn">TAILNET</span></td><td><code>100.64.0.0/10</code>, <code>fd7a:115c:a1e0::/48</code></td><td><code><TAILNET_IP>:3000</code> grafana</td></tr>
+    <tr><td><span class="chip lh">LOCALHOST</span></td><td><code>127.0.0.0/8</code>, <code>::1</code>. zone 표기(<code>127.0.0.53%lo</code>)를 포함한다.</td><td><code>127.0.0.1:5432</code> postgres</td></tr>
+    <tr><td><span class="chip int">INTERNAL</span></td><td>호스트 포트가 없다. 컨테이너가 포트를 노출만 한다.</td><td>prometheus <code>:9090</code></td></tr>
+    <tr><td><span class="chip oth">OTHER</span></td><td>위 네 개에 해당하지 않는 주소. 예: LAN IP.</td><td>없음</td></tr>
+  </table></div>
+  <h3>4.4 포트 연결 규칙</h3>
+  <ol>
+    <li>소유 프로세스가 <code>docker-proxy</code>이면, 앱은 Docker 포트 매핑에서 같은 <code>(HostIp, PublicPort)</code>를 찾는다. 앱은 그 컨테이너에 <code>PORT_MAPPING</code> 엣지를 만든다.</li>
+    <li>리스너에 <code>unit</code> 값이 있으면, 앱은 그 서비스에 <code>PORT_OWNER</code> 엣지를 만든다.</li>
+    <li>소유 프로세스를 모르면, 앱은 <code>owner</code>를 <code>"UNKNOWN"</code>으로 설정한다. 화면은 "미확인"을 표시한다.</li>
+  </ol>
+  <h3>4.5 응답 예시</h3>
+<pre><code>{
+  "generatedAt": "2026-10-22T10:00:05+09:00",
+  "sources": {
+    "docker":     { "status": "OK" },
+    "prometheus": { "status": "OK" },
+    "host":       { "status": "STALE", "snapshotAt": "2026-10-22T09:58:00+09:00", "message": "호스트 정보가 2분 전 것입니다" }
+  },
+  "nodes": [
+    { "id": "container:grafana", "kind": "CONTAINER", "parent": "compose:monitoring", "label": "grafana",
+      "status": "RUNNING",
+      "attrs": { "image": "grafana/grafana:latest", "health": null, "startedAt": "2026-08-15T..." },
+      "metrics": { "cpuPercent": 0.4, "memBytes": 120000000, "memLimitBytes": 1073741824 } }
+  ],
+  "edges": [
+    { "id": "PORT_MAPPING:port:tcp:<TAILNET_IP>:3000->container:grafana", "kind": "PORT_MAPPING",
+      "source": "port:tcp:<TAILNET_IP>:3000", "target": "container:grafana",
+      "attrs": { "containerPort": 3000, "exposure": "TAILNET" } }
+  ]
+}</code></pre>
+</section>
+
+<!-- 5 -->
+<section id="s5">
+  <h2><span class="no">5</span>화면 (시안 A: 그래프 중심)</h2>
+  <h3>5.1 위쪽 바</h3>
+  <p>위쪽 바는 다음 항목을 표시한다.</p>
+  <ol>
+    <li>호스트 이름과 가동 시간.</li>
+    <li>호스트 CPU, 메모리, 디스크 사용률.</li>
+    <li>출처 상태 배지 세 개.</li>
+    <li>마지막 갱신 시각("n초 전")과 새로고침 버튼.</li>
+    <li>필터 세 개: 노출 범위, 볼륨 표시, 호스트 서비스 표시.</li>
+  </ol>
+  <h3>5.2 그래프</h3>
+  <ol>
+    <li>화면은 React Flow로 그래프를 그린다.</li>
+    <li>compose 노드는 그룹이다. 그룹은 소속 컨테이너를 감싼다.</li>
+    <li>포트 노드는 노출 범위 색으로 표시한다 (4.3 참조).</li>
+    <li>사용자는 그래프를 줌하고 드래그할 수 있다.</li>
+  </ol>
+  <h3>5.3 배치</h3>
+  <ol>
+    <li>화면은 elkjs layered 방식으로 노드를 배치한다.</li>
+    <li>왼쪽 열은 포트이다. 가운데 열은 compose 그룹과 컨테이너이다. 오른쪽 열은 네트워크와 볼륨이다.</li>
+    <li>노드가 추가되거나 제거되면, 화면은 다시 배치한다. 그 외에는 위치를 유지한다.</li>
+    <li>사용자가 노드를 드래그하면, 화면은 위치를 localStorage에 저장한다.</li>
+  </ol>
+  <h3>5.4 상세 패널</h3>
+  <ol>
+    <li>사용자가 노드를 선택하면, 오른쪽 패널이 그 노드의 속성을 표시한다.</li>
+    <li>패널은 그 노드에 연결된 엣지도 표시한다.</li>
+    <li>컨테이너 노드와 호스트 노드의 패널에는 Grafana 링크(<code>http://<TAILNET_IP>:3000</code>)가 있다.</li>
+    <li>화면 폭이 640px 이하이면, 패널은 화면 아래에서 올라오는 시트로 바뀐다.</li>
+  </ol>
+</section>
+
+<!-- 6 -->
+<section id="s6">
+  <h2><span class="no">6</span>갱신과 오류 처리</h2>
+  <h3>6.1 갱신 주기</h3>
+  <div class="tbl"><table>
+    <tr><th>주체</th><th>동작</th><th>주기</th></tr>
+    <tr><td>수집기</td><td>호스트 파일을 다시 쓴다.</td><td>30초</td></tr>
+    <tr><td>Prometheus</td><td>메트릭을 수집한다 (기존 설정).</td><td>15초</td></tr>
+    <tr><td>화면</td><td><code>/api/topology</code>를 요청한다.</td><td>15초</td></tr>
+    <tr><td>앱</td><td>결과를 캐시한다.</td><td>5초</td></tr>
+    <tr><td>앱</td><td>호스트 파일의 나이를 검사한다.</td><td>요청마다</td></tr>
+  </table></div>
+  <ol>
+    <li>탭이 숨겨지면, 화면은 요청을 멈춘다.</li>
+    <li>탭이 다시 보이면, 화면은 즉시 한 번 요청한다.</li>
+    <li>앱은 세 출처를 병렬로 조회한다.</li>
+    <li>출처별 HTTP 타임아웃은 3초이다.</li>
+  </ol>
+  <figure>
+    <figcaption><b>150초 타임라인</b><span class="ctrl" id="tl-ctrl"><button type="button" data-s="normal" aria-pressed="true">정상</button><button type="button" data-s="stop" aria-pressed="false">수집기가 30초 후 멈춤</button></span></figcaption>
+    <div class="fig"><canvas id="cv-timeline" role="img" aria-label="150초 동안의 갱신 타임라인. 수집기는 30초마다, Prometheus와 화면 요청은 15초마다 실행된다. 화면 요청 뒤에는 5초 캐시 구간이 있다. 수집기가 멈추면 호스트 파일의 나이가 계속 늘고, 90초를 넘는 120초 시점부터 호스트 출처가 STALE이 된다."></canvas></div>
+  </figure>
+  <h3>6.2 출처 상태 판정</h3>
+  <ol>
+    <li>앱이 출처를 조회한다.</li>
+    <li>출처가 3초 안에 응답하지 않으면, 출처 상태는 <span class="chip s-er">ERROR</span>이다.</li>
+    <li>응답을 해석하지 못하면, 출처 상태는 <span class="chip s-er">ERROR</span>이다.</li>
+    <li>호스트 파일의 <code>snapshotAt</code>이 90초보다 오래되었으면, 출처 상태는 <span class="chip s-st">STALE</span>이다. 앱은 그 데이터를 계속 사용한다.</li>
+    <li>그 외에는 출처 상태가 <span class="chip s-ok">OK</span>이다.</li>
+  </ol>
+  <figure>
+    <figcaption><b>판정 흐름</b><span class="ctrl" id="dc-ctrl"><button type="button" data-s="ok" aria-pressed="true">정상 응답</button><button type="button" data-s="timeout" aria-pressed="false">3초 타임아웃</button><button type="button" data-s="parse" aria-pressed="false">깨진 응답</button><button type="button" data-s="stale" aria-pressed="false">오래된 호스트 파일</button></span></figcaption>
+    <div class="fig"><canvas id="cv-decision" role="img" aria-label="출처 상태 판정 흐름도. 출처 조회 후 3초 안에 응답이 없으면 ERROR, 응답을 해석하지 못하면 ERROR, 호스트 파일이 90초보다 오래되었으면 STALE, 그 외에는 OK이다."></canvas></div>
+  </figure>
+  <h3>6.3 실패 시 동작</h3>
+  <div class="tbl"><table>
+    <tr><th>상황</th><th>앱의 동작</th><th>화면의 동작</th></tr>
+    <tr><td>프록시 실패</td><td><code>docker</code>를 ERROR로 설정한다. Docker 노드를 만들지 않는다.</td><td>빨간 배너를 표시한다. 호스트 노드는 계속 표시한다.</td></tr>
+    <tr><td>Prometheus 실패</td><td><code>prometheus</code>를 ERROR로 설정한다. metrics를 null로 설정한다.</td><td>수치 자리에 "—"를 표시한다.</td></tr>
+    <tr><td>호스트 파일이 오래됨</td><td><code>host</code>를 STALE로 설정한다.</td><td>노란 배지에 "n분 전"을 표시한다.</td></tr>
+    <tr><td>호스트 파일이 없거나 깨짐</td><td><code>host</code>를 ERROR로 설정한다. 서비스 노드와 포트 노드를 만들지 않는다.</td><td>빨간 배지를 표시한다.</td></tr>
+    <tr><td>API 실패</td><td>—</td><td>마지막 그래프를 유지한다. "연결 끊김 · n초 전 데이터"를 표시한다.</td></tr>
+  </table></div>
+</section>
+
+<!-- 7 -->
+<section id="s7">
+  <h2><span class="no">7</span>배포</h2>
+  <h3>7.1 설정 값</h3>
+  <div class="tbl"><table>
+    <tr><th>항목</th><th>값</th></tr>
+    <tr><td>compose 프로젝트 이름</td><td><code>homeview</code></td></tr>
+    <tr><td>홈서버 경로</td><td><code>~/homeview</code></td></tr>
+    <tr><td>네트워크</td><td><code>homeview_internal</code> (프록시, 앱), <code>monitoring_monitoring</code> (external, 앱만)</td></tr>
+    <tr><td>포트</td><td><code><TAILNET_IP>:3001:8080</code></td></tr>
+    <tr><td>마운트</td><td><code>/var/lib/homeview/host.json:/data/host.json:ro</code></td></tr>
+    <tr><td>메모리 제한</td><td>앱 <code>512m</code>, 프록시 <code>64m</code></td></tr>
+  </table></div>
+  <h3>7.2 이미지 배포 절차</h3>
+  <ol>
+    <li>맥에서 <code>linux/amd64</code> 이미지를 빌드한다.</li>
+    <li><code>docker save</code>로 이미지를 저장한다.</li>
+    <li>결과를 <code>ssh homeserver docker load</code>로 전송한다.</li>
+    <li>홈서버에서 <code>docker compose up -d</code>를 실행한다.</li>
+  </ol>
+  <p>레지스트리는 사용하지 않는다.</p>
+  <h3>7.3 수집기 설치 절차</h3>
+  <ol>
+    <li>스크립트를 <code>/usr/local/bin/homeview-collect.sh</code>에 복사한다.</li>
+    <li>유닛 파일을 <code>/etc/systemd/system/homeview-collector.service</code>와 <code>.timer</code>에 복사한다.</li>
+    <li><code>systemctl daemon-reload</code>를 실행한다.</li>
+    <li><code>systemctl enable --now homeview-collector.timer</code>를 실행한다.</li>
+  </ol>
+  <p class="note">수집기는 root로 실행한다. 다른 사용자의 포트 소유 프로세스를 보려면 <code>ss -p</code>에 root 권한이 필요하다. 호스트 파일의 권한은 <code>0644</code>이다.</p>
+</section>
+
+<!-- 8 -->
+<section id="s8">
+  <h2><span class="no">8</span>테스트</h2>
+  <h3>8.1 규칙</h3>
+  <p>테스트 코드는 <code>kotlin-junit5-test.md</code>를 따른다.</p>
+  <ol>
+    <li>식별자는 ASCII로 쓴다.</li>
+    <li>한글은 <code>@DisplayName</code>에만 쓴다.</li>
+    <li>분기는 <code>@Nested inner class</code>로 나눈다.</li>
+  </ol>
+  <h3>8.2 대상과 방식</h3>
+  <div class="tbl"><table>
+    <tr><th>대상</th><th>방식</th><th>검증 항목</th></tr>
+    <tr><td><code>TopologyAssembler</code></td><td>순수 단위 테스트</td><td>그룹, 엣지, docker-proxy 포트 연결, 노출 범위, 미확인 포트, 출처 부분 실패</td></tr>
+    <tr><td><code>DockerSource</code>, <code>MetricsSource</code></td><td>MockWebServer. fixture는 홈서버에서 받은 실제 JSON이다.</td><td>파싱, 3초 타임아웃</td></tr>
+    <tr><td><code>HostSource</code></td><td>임시 디렉터리</td><td>정상, 파일 없음, 깨진 JSON, STALE</td></tr>
+    <tr><td><code>TopologyController</code></td><td><code>@WebMvcTest</code> 슬라이스</td><td>응답 형태, 5초 캐시</td></tr>
+    <tr><td>수집기</td><td><code>shellcheck</code>, 홈서버에서 1회 실행</td><td>문법, 출력 형식</td></tr>
+    <tr><td>화면</td><td>Vitest, Testing Library</td><td>응답 변환, 배지, 배너, 상세 패널, API 실패 시 마지막 그래프 유지</td></tr>
+  </table></div>
+  <p>레이아웃 좌표는 테스트하지 않는다.</p>
+  <h3>8.3 품질 게이트</h3>
+  <ol>
+    <li><code>./gradlew build</code>를 실행한다. 이 명령은 테스트와 kotlinter를 포함한다.</li>
+    <li><code>npm run typecheck</code>를 실행한다.</li>
+    <li><code>npm run lint</code>를 실행한다.</li>
+    <li><code>npm run test</code>를 실행한다.</li>
+    <li><code>npm run build</code>를 실행한다.</li>
+  </ol>
+</section>
+
+<!-- 9 -->
+<section id="s9">
+  <h2><span class="no">9</span>인수 기준 (EARS)</h2>
+  <div class="ac">
+    <div><b>AC-01</b><span>사용자가 tailnet 기기에서 <code>http://<TAILNET_IP>:3001</code>을 열면, 앱은 compose 프로젝트별로 컨테이너를 묶은 그래프를 표시해야 한다.</span></div>
+    <div><b>AC-02</b><span>앱은 각 컨테이너 노드에 실행 상태와 health를 표시해야 한다.</span></div>
+    <div><b>AC-03</b><span>앱은 각 컨테이너를 연결된 네트워크와 마운트된 볼륨에 엣지로 이어야 한다.</span></div>
+    <div><b>AC-04</b><span>호스트 포트가 컨테이너에 매핑되어 있으면, 앱은 포트 노드를 그 컨테이너에 잇고 노출 범위 색을 표시해야 한다.</span></div>
+    <div><b>AC-05</b><span>앱은 실행 중인 systemd 서비스와 그 서비스의 리스닝 포트를 표시해야 한다.</span></div>
+    <div><b>AC-06</b><span>Prometheus가 응답하면, 앱은 컨테이너별 CPU %와 메모리를 표시해야 한다. 앱은 호스트 CPU, 메모리, 디스크 사용률도 표시해야 한다.</span></div>
+    <div><b>AC-07</b><span>사용자가 노드를 선택하면, 앱은 상세 패널에 그 노드의 속성과 연결 관계를 표시해야 한다.</span></div>
+    <div><b>AC-08</b><span>화면이 보이는 동안, 앱은 15초마다 데이터를 갱신해야 한다. 앱은 마지막 갱신 시각을 표시해야 한다.</span></div>
+    <div><b>AC-09</b><span>출처 하나가 실패하면, 앱은 나머지 출처의 정보를 계속 표시해야 한다. 앱은 실패한 출처를 배지로 표시해야 한다.</span></div>
+    <div><b>AC-10</b><span>호스트 파일이 90초보다 오래되면, 앱은 호스트 출처를 STALE로 표시해야 한다.</span></div>
+    <div><b>AC-11</b><span>앱은 Docker 상태를 바꾸는 요청을 보내지 않아야 한다. 프록시는 POST 요청과 DELETE 요청에 403을 반환해야 한다.</span></div>
+    <div><b>AC-12</b><span>앱은 Tailscale IP 이외의 인터페이스에서 접근할 수 없어야 한다.</span></div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section id="s10">
+  <h2><span class="no">10</span>후보 (이번 범위 아님)</h2>
+  <ol>
+    <li>노출 범위 레인 보기 (시안 C).</li>
+    <li>Tailscale 피어 표시.</li>
+    <li>이상 상태 알림. 예: 컨테이너가 exited로 바뀜, 새 PUBLIC 포트가 생김.</li>
+  </ol>
+</section>
+</main>
+</div>
+
+<script>
+(() => {
+  const root = document.documentElement;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const tok = n => getComputedStyle(root).getPropertyValue(n).trim();
+  const SANS = '"IBM Plex Sans KR", system-ui, sans-serif';
+  const MONO = '"JetBrains Mono", ui-monospace, monospace';
+
+  // 공통: 논리 좌표(W×H)로 그리고, 실제 폭에 맞춰 DPR 스케일
+  function stage(id, W, H, draw) {
+    const cv = document.getElementById(id), ctx = cv.getContext("2d");
+    let visible = true, t0 = performance.now(), raf = 0;
+    function size() {
+      const w = cv.clientWidth, dpr = window.devicePixelRatio || 1;
+      cv.width = Math.round(w * dpr); cv.height = Math.round(w * H / W * dpr);
+      cv.style.height = (w * H / W) + "px";
+      ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+    }
+    function frame(now) {
+      ctx.clearRect(0, 0, W, H);
+      draw(ctx, reduce ? null : (now - t0) / 1000);
+      if (!reduce && visible) raf = requestAnimationFrame(frame);
+    }
+    const api = {
+      redraw() { cancelAnimationFrame(raf); size(); raf = requestAnimationFrame(frame); },
+      restart() { t0 = performance.now(); api.redraw(); }
+    };
+    new ResizeObserver(() => api.redraw()).observe(cv);
+    new IntersectionObserver(es => { visible = es[0].isIntersecting; if (visible) api.redraw(); }).observe(cv);
+    return api;
+  }
+
+  function rrect(c, x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, r); }
+  function box(c, cx, cy, w, h, label, sub, stroke, fill) {
+    rrect(c, cx - w / 2, cy - h / 2, w, h, 8);
+    c.fillStyle = fill || tok("--paper"); c.fill();
+    c.lineWidth = 1.5; c.strokeStyle = stroke || tok("--line"); c.stroke();
+    c.fillStyle = tok("--fg"); c.textAlign = "center"; c.textBaseline = "middle";
+    c.font = `600 13px ${SANS}`; c.fillText(label, cx, sub ? cy - 8 : cy);
+    if (sub) { c.font = `11px ${MONO}`; c.fillStyle = tok("--muted"); c.fillText(sub, cx, cy + 10); }
+  }
+  function arrow(c, pts, color, dash) {
+    c.save(); c.strokeStyle = color; c.fillStyle = color; c.lineWidth = 1.6;
+    if (dash) c.setLineDash(dash);
+    c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (const p of pts.slice(1)) c.lineTo(p[0], p[1]); c.stroke();
+    c.setLineDash([]);
+    const [a, b] = pts.slice(-2), ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+    c.beginPath(); c.moveTo(b[0], b[1]);
+    c.lineTo(b[0] - 9 * Math.cos(ang - .4), b[1] - 9 * Math.sin(ang - .4));
+    c.lineTo(b[0] - 9 * Math.cos(ang + .4), b[1] - 9 * Math.sin(ang + .4)); c.closePath(); c.fill();
+    c.restore();
+  }
+  function along(pts, f) {
+    const seg = []; let L = 0;
+    for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(d); L += d; }
+    let d = f * L;
+    for (let i = 0; i < seg.length; i++) {
+      if (d <= seg[i]) { const k = d / seg[i]; return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * k, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * k]; }
+      d -= seg[i];
+    }
+    return pts[pts.length - 1];
+  }
+  function dot(c, p, color, r = 4.5) { c.beginPath(); c.arc(p[0], p[1], r, 0, Math.PI * 2); c.fillStyle = color; c.fill(); }
+  function label(c, text, x, y, color, font, align = "center") {
+    c.fillStyle = color; c.font = font || `11.5px ${SANS}`; c.textAlign = align; c.textBaseline = "middle"; c.fillText(text, x, y);
+  }
+
+  /* 1. 데이터 흐름 */
+  const flow = stage("cv-flow", 1000, 420, (c, t) => {
+    const BW = 140, BH = 50, X = [85, 255, 425], AX = 610, CX = 775, UX = 925, MY = 210;
+    const rows = [
+      { y: 80, col: tok("--c-docker"), b: [["docker.sock", "읽기 전용"], ["프록시", "GET만 허용"], ["DockerSource", ""]] },
+      { y: 210, col: tok("--c-prom"), b: [["cAdvisor", "node-exporter"], ["Prometheus", ":9090"], ["MetricsSource", ""]] },
+      { y: 340, col: tok("--c-host"), b: [["수집기", "30초 타이머"], ["호스트 파일", "host.json"], ["HostSource", ""]] }
+    ];
+    // 영역
+    c.save(); c.setLineDash([5, 4]); c.strokeStyle = tok("--muted"); c.lineWidth = 1;
+    rrect(c, 340, 24, 655, 372, 12); c.stroke();
+    rrect(c, 8, 290, 325, 104, 12); c.stroke(); c.restore();
+    label(c, "앱 컨테이너 (homeview-app)", 352, 38, tok("--muted"), `600 11.5px ${SANS}`, "left");
+    label(c, "홈서버 호스트 (systemd)", 20, 304, tok("--muted"), `600 11.5px ${SANS}`, "left");
+
+    const paths = [];
+    rows.forEach(r => {
+      arrow(c, [[X[0] + BW / 2, r.y], [X[1] - BW / 2, r.y]], r.col);
+      arrow(c, [[X[1] + BW / 2, r.y], [X[2] - BW / 2, r.y]], r.col);
+      const into = [[X[2] + BW / 2, r.y], [AX - 90, r.y], [AX - 90, MY + (r.y - MY) * 0.25], [AX - 75, MY + (r.y - MY) * 0.25]];
+      arrow(c, into, r.col);
+      paths.push({ pts: [[X[0] + BW / 2, r.y], [X[2] + BW / 2, r.y], ...into.slice(1)], col: r.col });
+    });
+    arrow(c, [[AX + 75, MY], [CX - 65, MY]], tok("--accent"));
+    arrow(c, [[CX + 65, MY], [UX - 60, MY]], tok("--accent"));
+    label(c, "15초 요청", (CX + 65 + UX - 60) / 2, MY - 14, tok("--muted"));
+
+    // 차단된 POST
+    const by = 120;
+    arrow(c, [[X[2] - BW / 2 + 10, by], [X[1] + BW / 2 - 10, by]], tok("--err"), [5, 4]);
+    const mx = (X[1] + X[2]) / 2;
+    c.save(); c.strokeStyle = tok("--err"); c.lineWidth = 2.2;
+    c.beginPath(); c.moveTo(mx - 6, by - 6); c.lineTo(mx + 6, by + 6); c.moveTo(mx + 6, by - 6); c.lineTo(mx - 6, by + 6); c.stroke(); c.restore();
+    label(c, "POST → 403", mx, by + 16, tok("--err"), `600 11px ${MONO}`);
+
+    rows.forEach(r => r.b.forEach((b, i) => box(c, X[i], r.y, BW, BH, b[0], b[1], r.col)));
+    box(c, AX, MY, 150, 64, "TopologyAssembler", "세 출처 → 토폴로지", tok("--accent"));
+    box(c, CX, MY, 130, 64, "Controller", "캐시 5초", tok("--accent"));
+    box(c, UX, MY, 120, 64, "화면", "React Flow", tok("--accent"), tok("--accent-soft"));
+
+    // 패킷
+    const per = 3.2;
+    paths.forEach((p, i) => {
+      for (let k = 0; k < 2; k++) {
+        const f = t == null ? 0.3 + 0.35 * k : ((t / per + i * 0.17 + k * 0.5) % 1);
+        dot(c, along(p.pts, f), p.col);
+      }
+    });
+    const f2 = t == null ? 0.5 : ((t / 2.2) % 1);
+    dot(c, along([[AX + 75, MY], [UX - 60, MY]], f2), tok("--accent"), 5);
+  });
+
+  /* 2. 갱신 타임라인 */
+  let tlScenario = "normal";
+  const tl = stage("cv-timeline", 1000, 330, (c, t) => {
+    const x0 = 150, x1 = 975, T = 150, X = s => x0 + (x1 - x0) * s / T;
+    const now = t == null ? 135 : (t * 10) % (T + 15);
+    const stop = tlScenario === "stop";
+    const rows = [["수집기", 50], ["Prometheus 수집", 95], ["화면 요청 · 캐시", 140]];
+    rows.forEach(([n, y]) => {
+      label(c, n, 16, y, tok("--fg"), `600 12.5px ${SANS}`, "left");
+      c.strokeStyle = tok("--line"); c.lineWidth = 1; c.beginPath(); c.moveTo(x0, y); c.lineTo(x1, y); c.stroke();
+    });
+    // 축
+    for (let s = 0; s <= T; s += 15) {
+      const x = X(s);
+      c.strokeStyle = tok("--line"); c.globalAlpha = .5; c.beginPath(); c.moveTo(x, 30); c.lineTo(x, 300); c.stroke(); c.globalAlpha = 1;
+      label(c, s + "초", x, 316, tok("--muted"), `11px ${MONO}`);
+    }
+    // 수집기
+    for (let s = 0; s <= T; s += 30) {
+      const ok = !stop || s <= 30, x = X(s), on = s <= now;
+      if (ok) { c.globalAlpha = on ? 1 : .35; dot(c, [x, 50], tok("--c-host"), 6); c.globalAlpha = 1; }
+      else {
+        c.save(); c.strokeStyle = tok("--err"); c.globalAlpha = on ? 1 : .35; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(x - 5, 45); c.lineTo(x + 5, 55); c.moveTo(x + 5, 45); c.lineTo(x - 5, 55); c.stroke(); c.restore();
+      }
+    }
+    // Prometheus
+    for (let s = 0; s <= T; s += 15) { c.globalAlpha = s <= now ? 1 : .35; dot(c, [X(s), 95], tok("--c-prom"), 5); c.globalAlpha = 1; }
+    // 화면 요청 + 5초 캐시
+    for (let s = 0; s <= T; s += 15) {
+      c.globalAlpha = s <= now ? 1 : .35;
+      c.fillStyle = tok("--accent-soft"); c.fillRect(X(s), 132, X(5) - X(0), 16);
+      dot(c, [X(s), 140], tok("--accent"), 5); c.globalAlpha = 1;
+    }
+    label(c, "■ 캐시 5초", x1, 120, tok("--muted"), `11px ${SANS}`, "right");
+
+    // 호스트 파일 나이
+    const gy0 = 290, gy1 = 180, A = a => gy0 - (gy0 - gy1) * Math.min(a, 120) / 120;
+    label(c, "호스트 파일 나이", 16, 185, tok("--fg"), `600 12.5px ${SANS}`, "left");
+    label(c, "기준 90초", 16, A(90) + 14, tok("--warn"), `11px ${SANS}`, "left");
+    const age = s => { const last = stop ? Math.min(30, Math.floor(s / 30) * 30) : Math.floor(s / 30) * 30; return s - last; };
+    if (stop) { c.fillStyle = tok("--warn-soft"); c.fillRect(X(120), gy1 - 4, X(150) - X(120), gy0 - gy1 + 4); label(c, "STALE", (X(120) + X(150)) / 2, gy1 + 8, tok("--warn"), `600 11px ${MONO}`); }
+    c.save(); c.setLineDash([4, 4]); c.strokeStyle = tok("--warn"); c.beginPath(); c.moveTo(x0, A(90)); c.lineTo(x1, A(90)); c.stroke(); c.restore();
+    c.strokeStyle = tok("--c-host"); c.lineWidth = 2; c.beginPath();
+    for (let s = 0; s <= Math.min(now, T); s += 0.5) { const p = [X(s), A(age(s))]; s === 0 ? c.moveTo(...p) : c.lineTo(...p); }
+    c.stroke(); c.lineWidth = 1;
+
+    // 재생 위치
+    if (now <= T) {
+      const x = X(now), st = age(now) > 90 ? "STALE" : "OK";
+      c.strokeStyle = tok("--fg"); c.globalAlpha = .6; c.beginPath(); c.moveTo(x, 28); c.lineTo(x, 300); c.stroke(); c.globalAlpha = 1;
+      const col = st === "OK" ? tok("--ok") : tok("--warn"), bg = st === "OK" ? tok("--ok-soft") : tok("--warn-soft");
+      const bx = Math.min(x + 6, x1 - 118);
+      rrect(c, bx, 8, 118, 20, 10); c.fillStyle = bg; c.fill();
+      label(c, `host ${st} · ${Math.round(age(now))}초`, bx + 59, 18, col, `600 11px ${MONO}`);
+    }
+  });
+  document.getElementById("tl-ctrl").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    tlScenario = b.dataset.s;
+    for (const x of e.currentTarget.querySelectorAll("button")) x.setAttribute("aria-pressed", x === b);
+    tl.restart();
+  });
+
+  /* 3. 출처 상태 판정 */
+  let dcScenario = "ok";
+  const dc = stage("cv-decision", 1000, 340, (c, t) => {
+    const Y = 170;
+    const N = {
+      start: [80, Y], d1: [270, Y], d2: [480, Y], d3: [700, Y],
+      ok: [915, Y], err: [375, 300], stale: [700, 45]
+    };
+    function diamond(p, l1, l2, active) {
+      const [x, y] = p, w = 92, h = 50;
+      c.beginPath(); c.moveTo(x, y - h); c.lineTo(x + w, y); c.lineTo(x, y + h); c.lineTo(x - w, y); c.closePath();
+      c.fillStyle = tok("--paper"); c.fill(); c.lineWidth = active ? 2.4 : 1.5; c.strokeStyle = active ? tok("--accent") : tok("--line"); c.stroke();
+      label(c, l1, x, y - 8, tok("--fg"), `600 12.5px ${SANS}`); label(c, l2, x, y + 10, tok("--fg"), `600 12.5px ${SANS}`);
+    }
+    const route = {
+      ok: ["start", "d1", "d2", "d3", "ok"], timeout: ["start", "d1", "err"],
+      parse: ["start", "d1", "d2", "err"], stale: ["start", "d1", "d2", "d3", "stale"]
+    }[dcScenario];
+    const E = {
+      "start-d1": [[N.start[0] + 60, Y], [N.d1[0] - 92, Y]],
+      "d1-d2": [[N.d1[0] + 92, Y], [N.d2[0] - 92, Y]],
+      "d2-d3": [[N.d2[0] + 92, Y], [N.d3[0] - 92, Y]],
+      "d3-ok": [[N.d3[0] + 92, Y], [N.ok[0] - 55, Y]],
+      "d1-err": [[N.d1[0], Y + 50], [N.d1[0], 300], [N.err[0] - 60, 300]],
+      "d2-err": [[N.d2[0], Y + 50], [N.d2[0], 300], [N.err[0] + 60, 300]],
+      "d3-stale": [[N.d3[0], Y - 50], [N.d3[0], N.stale[1] + 22]]
+    };
+    const used = new Set(route.slice(1).map((n, i) => route[i] + "-" + n));
+    for (const [k, pts] of Object.entries(E)) arrow(c, pts, used.has(k) ? tok("--accent") : tok("--line"));
+    label(c, "예", (N.d1[0] + N.d2[0]) / 2, Y - 12, tok("--muted")); label(c, "예", (N.d2[0] + N.d3[0]) / 2, Y - 12, tok("--muted"));
+    label(c, "아니요", (N.d3[0] + N.ok[0]) / 2 - 10, Y - 12, tok("--muted"));
+    label(c, "아니요", N.d1[0] + 26, 245, tok("--muted")); label(c, "아니요", N.d2[0] + 26, 245, tok("--muted"));
+    label(c, "예", N.d3[0] + 16, 100, tok("--muted"));
+
+    const on = n => route.includes(n);
+    box(c, ...N.start, 120, 50, "출처 조회", "병렬 · 3초 제한", on("start") ? tok("--accent") : null);
+    diamond(N.d1, "3초 안에", "응답했나?", on("d1"));
+    diamond(N.d2, "응답을", "해석했나?", on("d2"));
+    diamond(N.d3, "호스트 파일이", "90초 초과인가?", on("d3"));
+    box(c, ...N.ok, 110, 46, "OK", "", tok("--ok"), on("ok") ? tok("--ok-soft") : null);
+    box(c, ...N.err, 120, 46, "ERROR", "", tok("--err"), on("err") ? tok("--err-soft") : null);
+    box(c, ...N.stale, 150, 44, "STALE", "데이터는 계속 사용", tok("--warn"), on("stale") ? tok("--warn-soft") : null);
+
+    // 토큰: 경로를 따라 이동
+    const pts = [N.start];
+    route.slice(1).forEach((n, i) => { const k = route[i] + "-" + n; pts.push(...E[k]); });
+    pts.push(N[route[route.length - 1]]);
+    const f = t == null ? 1 : Math.min(1, ((t % 4.5) / 3.2));
+    dot(c, along(pts, f), tok("--accent"), 6);
+  });
+  document.getElementById("dc-ctrl").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    dcScenario = b.dataset.s;
+    for (const x of e.currentTarget.querySelectorAll("button")) x.setAttribute("aria-pressed", x === b);
+    dc.restart();
+  });
+
+  // 테마 전환과 폰트 로딩 후 다시 그림
+  const all = [flow, tl, dc];
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => all.forEach(s => s.redraw()));
+  new MutationObserver(() => all.forEach(s => s.redraw())).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+  document.fonts && document.fonts.ready.then(() => all.forEach(s => s.redraw()));
+})();
+</script>
