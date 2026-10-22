@@ -100,6 +100,7 @@ figcaption b{color:var(--fg);font-weight:600}
     <span>상태 <b>사용자 검토 대기</b></span>
     <span>대상 <b>bombo-server · 100.94.174.67</b></span>
     <span>레이아웃 <a href="https://claude.ai/artifact/Ve7YcaVgX3SdXzPt6w4CJx">시안 A 채택</a></span>
+    <span>그래프 비주얼 <b>004_WORKSPACE DomainGraph</b> 참고</span>
   </div>
 </header>
 
@@ -293,24 +294,106 @@ figcaption b{color:var(--fg);font-weight:600}
     <li>마지막 갱신 시각("n초 전")과 새로고침 버튼.</li>
     <li>필터 세 개: 노출 범위, 볼륨 표시, 호스트 서비스 표시.</li>
   </ol>
-  <h3>5.2 그래프</h3>
+  <h3>5.2 그래프 비주얼</h3>
+  <p>참고 화면은 <code>~/Documents/004_WORKSPACE/site</code>의 DomainGraph(<code>src/pages/DomainGraph.tsx</code>)이다.</p>
+  <figure>
+    <figcaption><b>미리보기</b> grafana 선택 상태. 연결된 엣지는 진하고, 나머지는 흐리다.</figcaption>
+    <div class="fig"><svg viewBox="-60 -40 1032 800" role="img" aria-label="그래프 미리보기. 위에서 아래로 PORTS, monitoring, NETWORKS, VOLUMES 섹션이 쌓여 있다. grafana 카드가 선택되어 파란 테두리를 가진다. grafana에 연결된 포트 매핑, 네트워크 연결, 마운트 엣지는 진하고, 나머지 엣지는 흐리다." style="display:block;width:100%;min-width:680px;height:auto;font-family:system-ui,sans-serif"><defs><pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#1a1a1e"/></pattern></defs><rect x="-60" y="-40" width="1032" height="800" fill="#0a0a0b"/><rect x="-60" y="-40" width="1032" height="800" fill="url(#dots)"/><rect x="112" y="0" width="688" height="144" rx="12" fill="none" stroke="#a1a1aa" stroke-opacity=".15"/><text x="128" y="22" fill="#a1a1aa" font-size="11" font-weight="600" letter-spacing=".5">PORTS</text><text x="784" y="22" fill="#a1a1aa" fill-opacity=".4" font-size="11" text-anchor="end">3</text><rect x="0" y="184" width="912" height="144" rx="12" fill="none" stroke="#3182f6" stroke-opacity=".15"/><text x="16" y="206" fill="#3182f6" font-size="11" font-weight="600" letter-spacing=".5">MONITORING</text><text x="896" y="206" fill="#3182f6" fill-opacity=".4" font-size="11" text-anchor="end">4</text><rect x="336" y="368" width="240" height="144" rx="12" fill="none" stroke="#22d3ee" stroke-opacity=".15"/><text x="352" y="390" fill="#22d3ee" font-size="11" font-weight="600" letter-spacing=".5">NETWORKS</text><text x="560" y="390" fill="#22d3ee" fill-opacity=".4" font-size="11" text-anchor="end">1</text><rect x="224" y="552" width="464" height="144" rx="12" fill="none" stroke="#34d399" stroke-opacity=".15"/><text x="240" y="574" fill="#34d399" font-size="11" font-weight="600" letter-spacing=".5">VOLUMES</text><text x="672" y="574" fill="#34d399" fill-opacity=".4" font-size="11" text-anchor="end">2</text><path d="M344,272 C344,364 456,364 456,456" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-opacity="0.105"/><path d="M568,272 C568,364 456,364 456,456" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-opacity="0.105"/><path d="M792,272 C792,364 456,364 456,456" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-opacity="0.105"/><path d="M344,272 C344,456 568,456 568,640" fill="none" stroke="#34d399" stroke-width="1.5" stroke-opacity="0.105"/><path d="M120,272 C120,364 456,364 456,456" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-opacity="0.875"/><path d="M120,272 C120,456 344,456 344,640" fill="none" stroke="#34d399" stroke-width="1.5" stroke-opacity="0.875"/><path d="M456,88 C456,180 120,180 120,272" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-opacity="0.875"/><rect x="132" y="52" width="200" height="72" rx="10" fill="#141416" stroke="#f87171" stroke-width="1"/><text x="148" y="82" fill="#e4e4e7" font-size="13" font-weight="600">:22</text><text x="148" y="102" fill="#71717a" font-size="11">0.0.0.0 · PUBLIC</text><rect x="356" y="52" width="200" height="72" rx="10" fill="#141416" stroke="#60a5fa" stroke-width="1"/><text x="372" y="82" fill="#e4e4e7" font-size="13" font-weight="600">:3000</text><text x="372" y="102" fill="#71717a" font-size="11">100.94.174.67 · TAILNET</text><rect x="580" y="52" width="200" height="72" rx="10" fill="#141416" stroke="#c084fc" stroke-width="1"/><text x="596" y="82" fill="#e4e4e7" font-size="13" font-weight="600">:53</text><text x="596" y="102" fill="#71717a" font-size="11">127.0.0.53%lo · LOCALHOST</text><rect x="18" y="234" width="204" height="76" rx="12" fill="none" stroke="#3182f6" stroke-opacity=".25" stroke-width="4"/><rect x="20" y="236" width="200" height="72" rx="10" fill="#141416" stroke="#3182f6" stroke-width="1"/><text x="36" y="266" fill="#e4e4e7" font-size="13" font-weight="600">grafana</text><text x="36" y="286" font-size="11"><tspan fill="#34d399">●</tspan><tspan fill="#71717a"> 0.4% · 120MB</tspan></text><rect x="244" y="236" width="200" height="72" rx="10" fill="#141416" stroke="#232328" stroke-width="1"/><text x="260" y="266" fill="#e4e4e7" font-size="13" font-weight="600">prometheus</text><text x="260" y="286" font-size="11"><tspan fill="#34d399">●</tspan><tspan fill="#71717a"> 1.2% · 310MB</tspan></text><rect x="468" y="236" width="200" height="72" rx="10" fill="#141416" stroke="#232328" stroke-width="1"/><text x="484" y="266" fill="#e4e4e7" font-size="13" font-weight="600">cadvisor</text><text x="484" y="286" font-size="11"><tspan fill="#facc15">●</tspan><tspan fill="#71717a"> 2.8% · 85MB</tspan></text><rect x="692" y="236" width="200" height="72" rx="10" fill="#141416" stroke="#232328" stroke-width="1"/><text x="708" y="266" fill="#e4e4e7" font-size="13" font-weight="600">node-exporter</text><text x="708" y="286" font-size="11"><tspan fill="#34d399">●</tspan><tspan fill="#71717a"> 0.1% · 18MB</tspan></text><rect x="356" y="420" width="200" height="72" rx="10" fill="#141416" stroke="#232328" stroke-width="1"/><text x="372" y="450" fill="#e4e4e7" font-size="13" font-weight="600">monitoring_monitoring</text><text x="372" y="470" fill="#71717a" font-size="11">bridge</text><rect x="244" y="604" width="200" height="72" rx="10" fill="#141416" stroke="#232328" stroke-width="1"/><text x="260" y="634" fill="#e4e4e7" font-size="13" font-weight="600">grafana-data</text><text x="260" y="654" fill="#71717a" font-size="11">named</text><rect x="468" y="604" width="200" height="72" rx="10" fill="#141416" stroke="#232328" stroke-width="1"/><text x="484" y="634" fill="#e4e4e7" font-size="13" font-weight="600">prometheus-data</text><text x="484" y="654" fill="#71717a" font-size="11">named</text><rect x="924" y="-24" width="32" height="32" rx="6" fill="#141416" stroke="#232328"/><text x="940" y="-4" fill="#71717a" font-size="14" text-anchor="middle">+</text><rect x="924" y="12" width="32" height="32" rx="6" fill="#141416" stroke="#232328"/><text x="940" y="32" fill="#71717a" font-size="14" text-anchor="middle">−</text><rect x="924" y="48" width="32" height="32" rx="6" fill="#141416" stroke="#232328"/><text x="940" y="68" fill="#71717a" font-size="10" text-anchor="middle">Fit</text><rect x="-44" y="716" width="560" height="30" rx="6" fill="#141416" stroke="#232328"/><line x1="-30" y1="731" x2="-10" y2="731" stroke="#22d3ee" stroke-width="2"/><text x="-4" y="735" fill="#71717a" font-size="11">NETWORK_ATTACH</text><line x1="112" y1="731" x2="132" y2="731" stroke="#34d399" stroke-width="2"/><text x="138" y="735" fill="#71717a" font-size="11">MOUNT</text><line x1="191" y1="731" x2="211" y2="731" stroke="#60a5fa" stroke-width="2"/><text x="217" y="735" fill="#71717a" font-size="11">PORT_MAPPING</text><line x1="319" y1="731" x2="339" y2="731" stroke="#facc15" stroke-width="2" stroke-dasharray="3 3"/><text x="345" y="735" fill="#71717a" font-size="11">PORT_OWNER</text></svg></div>
+  </figure>
   <ol>
-    <li>화면은 React Flow로 그래프를 그린다.</li>
-    <li>compose 노드는 그룹이다. 그룹은 소속 컨테이너를 감싼다.</li>
-    <li>포트 노드는 노출 범위 색으로 표시한다 (4.3 참조).</li>
-    <li>사용자는 그래프를 줌하고 드래그할 수 있다.</li>
+    <li>화면은 SVG로 그래프를 직접 그린다. 그래프 라이브러리는 사용하지 않는다.</li>
+    <li>배경색은 <code>#0a0a0b</code>이다. 화면은 배경에 24px 간격의 점 격자를 그린다.</li>
+    <li>노드는 카드이다. 카드 크기는 200×72px이다. 모서리 반경은 10px이다.</li>
+    <li>카드 배경색은 <code>#141416</code>이다. 카드 테두리색은 <code>#232328</code>이다.</li>
+    <li>카드의 첫째 줄은 노드 이름이다. 첫째 줄은 13px 굵은 글자이다.</li>
+    <li>카드의 둘째 줄은 노드 요약이다. 둘째 줄은 11px 흐린 글자(<code>#71717a</code>)이다. 요약 내용은 아래 표를 따른다.</li>
+    <li>글자가 카드보다 길면, 화면은 글자를 말줄임표로 자른다.</li>
   </ol>
+<div class="tbl"><table>
+    <tr><th>노드 kind</th><th>둘째 줄</th></tr>
+    <tr><td><code>HOST</code></td><td>가동 시간</td></tr>
+    <tr><td><code>HOST_SERVICE</code></td><td><code>sub</code> 값</td></tr>
+    <tr><td><code>LISTEN_PORT</code></td><td>주소와 노출 범위. 예: <code>100.94.174.67 · TAILNET</code></td></tr>
+    <tr><td><code>CONTAINER</code></td><td>상태 점, CPU %, 메모리. 예: <code>● 0.4% · 120MB</code></td></tr>
+    <tr><td><code>NETWORK</code></td><td>드라이버</td></tr>
+    <tr><td><code>VOLUME</code></td><td><code>named</code> 또는 bind 경로</td></tr>
+  </table></div>
+  <p>컨테이너 상태 점의 색:</p>
+<div class="tbl"><table>
+    <tr><th>상태</th><th>색</th></tr>
+    <tr><td><code>RUNNING</code>, health가 <code>healthy</code> 또는 null</td><td>초록 <i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#34d399;margin-right:6px;vertical-align:-1px"></i><code>#34d399</code></td></tr>
+    <tr><td>health가 <code>starting</code></td><td>노랑 <i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#facc15;margin-right:6px;vertical-align:-1px"></i><code>#facc15</code></td></tr>
+    <tr><td>health가 <code>unhealthy</code></td><td>빨강 <i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f87171;margin-right:6px;vertical-align:-1px"></i><code>#f87171</code></td></tr>
+    <tr><td><code>RUNNING</code> 이외의 상태</td><td>회색 <i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#71717a;margin-right:6px;vertical-align:-1px"></i><code>#71717a</code></td></tr>
+  </table></div>
+  <p>포트 카드의 테두리는 노출 범위 색이다 (4.3 참조). 노출 범위 색의 값:</p>
+<div class="tbl"><table>
+    <tr><th>노출 범위</th><th>색</th></tr>
+    <tr><td><code>PUBLIC</code></td><td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f87171;margin-right:6px;vertical-align:-1px"></i><code>#f87171</code></td></tr>
+    <tr><td><code>TAILNET</code></td><td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#60a5fa;margin-right:6px;vertical-align:-1px"></i><code>#60a5fa</code></td></tr>
+    <tr><td><code>LOCALHOST</code></td><td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#c084fc;margin-right:6px;vertical-align:-1px"></i><code>#c084fc</code></td></tr>
+    <tr><td><code>INTERNAL</code></td><td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#a1a1aa;margin-right:6px;vertical-align:-1px"></i><code>#a1a1aa</code></td></tr>
+    <tr><td><code>OTHER</code></td><td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#fb923c;margin-right:6px;vertical-align:-1px"></i><code>#fb923c</code></td></tr>
+  </table></div>
+  <p>엣지는 3차 베지어 곡선이다. 곡선의 두 제어점은 시작점과 끝점의 중간 높이에 있다. 시작점과 끝점의 가로 거리가 50px보다 작으면, 화면은 제어점을 가로로 60px 벌린다.</p>
+<div class="tbl"><table>
+    <tr><th>엣지 kind</th><th>색</th><th>선 모양</th><th>기본 불투명도</th></tr>
+    <tr><td><code>NETWORK_ATTACH</code></td><td>청록 <i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22d3ee;margin-right:6px;vertical-align:-1px"></i><code>#22d3ee</code></td><td>실선</td><td>0.35</td></tr>
+    <tr><td><code>MOUNT</code></td><td>초록 <i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#34d399;margin-right:6px;vertical-align:-1px"></i><code>#34d399</code></td><td>실선. 읽기 전용이면 점선 <code>6 4</code>.</td><td>0.35</td></tr>
+    <tr><td><code>PORT_MAPPING</code></td><td>노출 범위 색</td><td>실선</td><td>0.35</td></tr>
+    <tr><td><code>PORT_OWNER</code></td><td>노랑 <i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#facc15;margin-right:6px;vertical-align:-1px"></i><code>#facc15</code></td><td>점선 <code>3 3</code></td><td>0.25</td></tr>
+  </table></div>
+  <p>엣지 선 두께는 1.5px이다.</p>
   <h3>5.3 배치</h3>
   <ol>
-    <li>화면은 elkjs layered 방식으로 노드를 배치한다.</li>
-    <li>왼쪽 열은 포트이다. 가운데 열은 compose 그룹과 컨테이너이다. 오른쪽 열은 네트워크와 볼륨이다.</li>
-    <li>노드가 추가되거나 제거되면, 화면은 다시 배치한다. 그 외에는 위치를 유지한다.</li>
-    <li>사용자가 노드를 드래그하면, 화면은 위치를 localStorage에 저장한다.</li>
+    <li>화면은 노드를 섹션별 격자로 배치한다. 배치 라이브러리는 사용하지 않는다.</li>
+    <li>섹션 하나는 노드 kind 하나 또는 compose 프로젝트 하나를 담는다.</li>
+    <li>화면은 섹션을 위에서 아래로 다음 순서로 쌓는다: <code>HOST</code>, <code>HOST_SERVICE</code>, <code>LISTEN_PORT</code>, compose 프로젝트(이름 순서, 소속 컨테이너를 담음), 소속 없는 컨테이너(<code>parent</code>가 null), <code>NETWORK</code>, <code>VOLUME</code>.</li>
+    <li>섹션 하나는 최대 4열이다. 노드가 4개를 넘으면, 화면은 다음 줄에 배치한다.</li>
+    <li>카드 간격은 가로 24px, 세로 20px이다. 섹션 안쪽 여백은 20px이다. 섹션 사이 간격은 40px이다.</li>
+    <li>화면은 모든 섹션을 가장 넓은 섹션 기준으로 가운데 정렬한다.</li>
+    <li>섹션 안에서 화면은 노드를 id 순서로 정렬한다. 그래서 같은 데이터는 항상 같은 위치에 그려진다.</li>
+    <li>노드가 없는 섹션은 그리지 않는다. 필터(5.1)로 숨긴 노드도 섹션에서 뺀다.</li>
+    <li>사용자는 노드를 드래그할 수 없다. 화면은 노드 위치를 저장하지 않는다.</li>
   </ol>
-  <h3>5.4 상세 패널</h3>
+  <p>섹션 박스:</p>
   <ol>
-    <li>사용자가 노드를 선택하면, 오른쪽 패널이 그 노드의 속성을 표시한다.</li>
-    <li>패널은 그 노드에 연결된 엣지도 표시한다.</li>
+    <li>섹션 박스는 채우기가 없다. 테두리는 1px이고 불투명도는 0.15이다. 모서리 반경은 12px이다.</li>
+    <li>섹션 박스의 왼쪽 위에 섹션 라벨을 쓴다. 라벨은 11px 굵은 대문자이다.</li>
+    <li>섹션 박스의 오른쪽 위에 노드 개수를 쓴다. 개수의 불투명도는 0.4이다.</li>
+    <li>테두리, 라벨, 개수는 섹션 색을 쓴다.</li>
+  </ol>
+<div class="tbl"><table>
+    <tr><th>섹션</th><th>라벨</th><th>섹션 색</th></tr>
+    <tr><td><code>HOST</code></td><td><code>HOST</code></td><td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#e4e4e7;margin-right:6px;vertical-align:-1px"></i><code>#e4e4e7</code></td></tr>
+    <tr><td><code>HOST_SERVICE</code></td><td><code>HOST SERVICES</code></td><td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#facc15;margin-right:6px;vertical-align:-1px"></i><code>#facc15</code></td></tr>
+    <tr><td><code>LISTEN_PORT</code></td><td><code>PORTS</code></td><td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#a1a1aa;margin-right:6px;vertical-align:-1px"></i><code>#a1a1aa</code></td></tr>
+    <tr><td>compose 프로젝트</td><td>프로젝트 이름</td><td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3182f6;margin-right:6px;vertical-align:-1px"></i><code>#3182f6</code></td></tr>
+    <tr><td>소속 없는 컨테이너</td><td><code>STANDALONE</code></td><td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#71717a;margin-right:6px;vertical-align:-1px"></i><code>#71717a</code></td></tr>
+    <tr><td><code>NETWORK</code></td><td><code>NETWORKS</code></td><td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22d3ee;margin-right:6px;vertical-align:-1px"></i><code>#22d3ee</code></td></tr>
+    <tr><td><code>VOLUME</code></td><td><code>VOLUMES</code></td><td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#34d399;margin-right:6px;vertical-align:-1px"></i><code>#34d399</code></td></tr>
+  </table></div>
+  <h3>5.4 상호작용</h3>
+  <ol>
+    <li>사용자는 배경을 드래그해서 그래프를 이동한다. 포인터가 3px보다 많이 움직이면, 화면은 그 동작을 드래그로 판정한다.</li>
+    <li>사용자는 마우스 휠로 줌한다. 줌 중심은 포인터 위치이다. 줌 범위는 0.1배에서 3배이다.</li>
+    <li>터치 기기에서 사용자는 한 손가락으로 이동한다. 사용자는 두 손가락으로 줌한다.</li>
+    <li>화면은 오른쪽 위에 버튼 세 개를 표시한다: <code>+</code>, <code>−</code>, <code>Fit</code>. <code>+</code>는 1.2배 확대한다. <code>−</code>는 1.2배 축소한다.</li>
+    <li><code>Fit</code>은 그래프 전체가 보이도록 줌과 위치를 맞춘다. 여백은 60px이다. 최대 배율은 1.5배이다.</li>
+    <li>화면은 그래프를 처음 그릴 때 <code>Fit</code>을 한 번 실행한다.</li>
+    <li>데이터가 갱신되면, 화면은 현재 줌과 위치를 유지한다.</li>
+    <li>화면은 왼쪽 아래에 엣지 범례를 표시한다. 범례는 엣지 kind별 선 샘플과 이름을 보여준다.</li>
+    <li>사용자가 노드를 선택하면, 화면은 선택된 카드의 테두리를 <code>#3182f6</code>으로 바꾼다.</li>
+    <li>노드가 선택되면, 그 노드에 연결된 엣지의 불투명도는 기본값의 2.5배이다. 나머지 엣지의 불투명도는 기본값의 0.3배이다.</li>
+    <li>사용자가 배경을 클릭하면, 화면은 선택을 해제한다. 드래그는 선택을 해제하지 않는다.</li>
+    <li>데이터가 갱신되어도 선택된 노드가 남아 있으면, 화면은 선택을 유지한다.</li>
+  </ol>
+  <h3>5.5 상세 패널</h3>
+  <ol>
+    <li>사용자가 노드를 선택하면, 오른쪽 패널이 그 노드의 속성을 표시한다. 패널 폭은 320px이다.</li>
+    <li>패널의 맨 위에는 노드 kind와 노드 이름이 있다. kind는 섹션 색으로 표시한다.</li>
+    <li>패널은 그 노드에 연결된 엣지도 표시한다. 엣지 한 줄은 엣지 kind 배지와 상대 노드 이름이다.</li>
+    <li>사용자가 엣지 줄을 클릭하면, 화면은 상대 노드를 선택한다.</li>
     <li>컨테이너 노드와 호스트 노드의 패널에는 Grafana 링크(<code>http://100.94.174.67:3000</code>)가 있다.</li>
     <li>화면 폭이 640px 이하이면, 패널은 화면 아래에서 올라오는 시트로 바뀐다.</li>
   </ol>
@@ -410,9 +493,10 @@ figcaption b{color:var(--fg);font-weight:600}
     <tr><td><code>HostSource</code></td><td>임시 디렉터리</td><td>정상, 파일 없음, 깨진 JSON, STALE</td></tr>
     <tr><td><code>TopologyController</code></td><td><code>@WebMvcTest</code> 슬라이스</td><td>응답 형태, 5초 캐시</td></tr>
     <tr><td>수집기</td><td><code>shellcheck</code>, 홈서버에서 1회 실행</td><td>문법, 출력 형식</td></tr>
-    <tr><td>화면</td><td>Vitest, Testing Library</td><td>응답 변환, 배지, 배너, 상세 패널, API 실패 시 마지막 그래프 유지</td></tr>
+    <tr><td>화면</td><td>Vitest, Testing Library</td><td>응답 변환, 배지, 배너, 상세 패널, 선택 강조, API 실패 시 마지막 그래프 유지</td></tr>
+    <tr><td>섹션 배치 함수</td><td>Vitest 순수 단위 테스트</td><td>섹션 순서, 4열 줄바꿈, 빈 섹션 제외, 같은 입력에 같은 좌표</td></tr>
   </table></div>
-  <p>레이아웃 좌표는 테스트하지 않는다.</p>
+  <p>픽셀 단위 렌더링 결과는 테스트하지 않는다.</p>
   <h3>8.3 품질 게이트</h3>
   <ol>
     <li><code>./gradlew build</code>를 실행한다. 이 명령은 테스트와 kotlinter를 포함한다.</li>
@@ -559,7 +643,7 @@ figcaption b{color:var(--fg);font-weight:600}
     rows.forEach(r => r.b.forEach((b, i) => box(c, X[i], r.y, BW, BH, b[0], b[1], r.col)));
     box(c, AX, MY, 150, 64, "TopologyAssembler", "세 출처 → 토폴로지", tok("--accent"));
     box(c, CX, MY, 130, 64, "Controller", "캐시 5초", tok("--accent"));
-    box(c, UX, MY, 120, 64, "화면", "React Flow", tok("--accent"), tok("--accent-soft"));
+    box(c, UX, MY, 120, 64, "화면", "SVG", tok("--accent"), tok("--accent-soft"));
 
     // 패킷
     const per = 3.2;
