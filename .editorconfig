@@ -1,0 +1,31 @@
+# 공통 Kotlin .editorconfig 템플릿
+# kotlinter(formatKotlin/lintKotlin), ktlint-gradle(ktlintFormat/ktlintCheck), IntelliJ가 모두 이 파일을 읽는다.
+# 새 프로젝트 루트에 복사해서 커밋한다 (심링크 사용 안 함: CI에서도 읽어야 함).
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{kt,kts}]
+# IntelliJ 기본 포맷과 맞춰 IDE 재포맷과 포맷터가 서로 diff를 만들지 않게 한다.
+ktlint_code_style = intellij_idea
+max_line_length = 120
+
+# trailing comma: 항목 추가 시 diff가 한 줄로 끝난다.
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+
+# 와일드카드 import 금지 (ktlint no-wildcard-imports 규칙과 IDE 설정을 일치시킨다)
+ij_kotlin_name_count_to_use_star_import = 2147483647
+ij_kotlin_name_count_to_use_star_import_for_members = 2147483647
+
+[*.{yml,yaml,json}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
