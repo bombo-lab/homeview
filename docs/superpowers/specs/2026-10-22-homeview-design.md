@@ -370,7 +370,7 @@
 | compose 프로젝트 이름 | `homeview` |
 | 배포 작업 디렉터리 | 러너 작업 디렉터리. compose 프로젝트 이름으로 구분한다. |
 | 네트워크 | `homeview_internal` (프록시, 앱), `monitoring_monitoring` (external, 앱만) |
-| 포트 | `<TAILNET_IP>:3001:8080` |
+| 포트 | `${HOMEVIEW_BIND_IP}:3001:8080`. CD는 저장소 시크릿 `HOMEVIEW_BIND_IP`에서 tailnet IP를 받는다. 공개 저장소에 IP를 쓰지 않는다. |
 | 마운트 | `/var/lib/homeview:/data:ro`. 앱은 `/data/host.json`을 읽는다. |
 | 메모리 제한 | 앱 `512m`, 프록시 `64m` |
 
@@ -385,7 +385,7 @@
 3. 러너가 `runtime` 이미지를 커밋 SHA 태그와 `latest` 태그로 빌드한다.
 4. 러너가 `docker compose -f deploy/compose.yml up -d --wait`를 실행한다.
 
-레지스트리는 사용하지 않는다. 롤백은 `IMAGE_TAG=<이전 커밋 SHA> docker compose -f deploy/compose.yml up -d --wait`로 한다.
+레지스트리는 사용하지 않는다. 롤백은 `HOMEVIEW_BIND_IP=<tailnet IP> IMAGE_TAG=<이전 커밋 SHA> docker compose -f deploy/compose.yml up -d --wait`로 한다.
 
 ### 7.3 수집기 설치 절차
 

@@ -23,6 +23,7 @@ jobs:
     timeout-minutes: 20
     env:
       IMAGE_TAG: ${{ github.sha }}
+      HOMEVIEW_BIND_IP: ${{ secrets.HOMEVIEW_BIND_IP }}
     steps:
       - uses: actions/checkout@v4
 
