@@ -1,0 +1,43 @@
+# homeview 배포 정의. CD(.github/workflows/cd.yml)가 홈서버 러너에서 실행한다.
+# 수동 롤백: IMAGE_TAG=<이전 커밋 SHA> docker compose -f deploy/compose.yml up -d --wait
+name: homeview
+
+services:
+  proxy:
+    image: tecnativa/docker-socket-proxy:v0.5.0
+    container_name: homeview-proxy
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      NETWORKS: 1
+      VOLUMES: 1
+      POST: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [internal]
+    mem_limit: 64m
+
+  app:
+    image: homeview-app:${IMAGE_TAG:-latest}
+    container_name: homeview-app
+    restart: unless-stopped
+    depends_on: [proxy]
+    ports:
+      - "100.94.174.67:3001:8080"
+    volumes:
+      - /var/lib/homeview:/data:ro
+    networks: [internal, monitoring]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 60s
+
+networks:
+  internal:
+    name: homeview_internal
+  monitoring:
+    name: monitoring_monitoring
+    external: true
