@@ -1,5 +1,5 @@
 # homeview 배포 정의. CD(.github/workflows/cd.yml)가 홈서버 러너에서 실행한다.
-# 수동 롤백: IMAGE_TAG=<이전 커밋 SHA> docker compose -f deploy/compose.yml up -d --wait
+# 수동 롤백: HOMEVIEW_BIND_IP=<tailnet IP> IMAGE_TAG=<이전 커밋 SHA> docker compose -f deploy/compose.yml up -d --wait
 name: homeview
 
 services:
@@ -23,7 +23,8 @@ services:
     restart: unless-stopped
     depends_on: [proxy]
     ports:
-      - "<TAILNET_IP>:3001:8080"
+      # 공개 저장소에 tailnet IP를 남기지 않는다. CD는 시크릿 HOMEVIEW_BIND_IP에서 값을 받는다.
+      - "${HOMEVIEW_BIND_IP:?HOMEVIEW_BIND_IP를 설정하세요}:3001:8080"
     volumes:
       - /var/lib/homeview:/data:ro
     networks: [internal, monitoring]
