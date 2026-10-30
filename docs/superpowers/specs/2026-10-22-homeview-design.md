@@ -1,7 +1,7 @@
 # Homeview 설계 (SPEC-HV-001)
 
 - 작성일: 2026-10-22
-- 상태: 사용자 검토 대기
+- 상태: 승인됨 (2026-10-27)
 - 작성 규칙: STE100 원칙을 한국어에 적용한다 (0절 참조).
 - HTML 뷰: `docs/superpowers/specs/2026-10-22-homeview-design.html`
 - 레이아웃 시안: https://claude.ai/artifact/Ve7YcaVgX3SdXzPt6w4CJx (시안 A 채택)
@@ -89,7 +89,7 @@
 2. 보기 전용 경계는 두 곳에 둔다. 첫째, 프록시가 POST를 차단한다. 둘째, 앱 코드에는 GET 요청만 있다.
 3. 컨테이너에 `pid: host` 권한을 주지 않는다. 수집기가 호스트에서 호스트 정보를 수집한다.
 4. 수집기는 임시 파일에 먼저 쓴다. 그 다음 `mv`로 호스트 파일을 교체한다. 그래서 앱은 반쯤 쓴 파일을 읽지 않는다.
-5. 코드 저장소는 맥의 `/Users/bombo/Documents/900_PROJECT/999_homeview`이다. 홈서버에는 이미지, compose 파일, 수집기만 배포한다.
+5. 코드 저장소는 GitHub `bombo-lab/homeview`이다. 홈서버의 러너가 저장소를 받아 이미지를 빌드하고 배포한다 (7.2 참조).
 
 ## 3. 구성 요소
 
@@ -368,20 +368,24 @@
 | 항목 | 값 |
 |---|---|
 | compose 프로젝트 이름 | `homeview` |
-| 홈서버 경로 | `~/homeview` |
+| 배포 작업 디렉터리 | 러너 작업 디렉터리. compose 프로젝트 이름으로 구분한다. |
 | 네트워크 | `homeview_internal` (프록시, 앱), `monitoring_monitoring` (external, 앱만) |
 | 포트 | `<TAILNET_IP>:3001:8080` |
-| 마운트 | `/var/lib/homeview/host.json:/data/host.json:ro` |
+| 마운트 | `/var/lib/homeview:/data:ro`. 앱은 `/data/host.json`을 읽는다. |
 | 메모리 제한 | 앱 `512m`, 프록시 `64m` |
+
+앱은 호스트 파일이 아니라 디렉터리를 마운트한다. 수집기는 `mv`로 파일을 교체한다. 파일 하나만 마운트하면, 컨테이너는 교체 전 파일을 계속 읽는다.
 
 ### 7.2 이미지 배포 절차
 
-1. 맥에서 `linux/amd64` 이미지를 빌드한다.
-2. `docker save`로 이미지를 저장한다.
-3. 결과를 `ssh homeserver docker load`로 전송한다.
-4. 홈서버에서 `docker compose up -d`를 실행한다.
+배포는 GitHub Actions `cd` 워크플로가 한다. 홈서버의 조직 러너(라벨 `homeserver`)가 실행한다.
 
-레지스트리는 사용하지 않는다.
+1. 사용자가 `cd` 워크플로를 수동 실행한다. 입력 `server`에서 배포할 서버를 고른다.
+2. 러너가 `docker/Dockerfile`의 `build` 스테이지를 실행한다. 이 스테이지는 화면 검사와 `gradle build`를 포함한다.
+3. 러너가 `runtime` 이미지를 커밋 SHA 태그와 `latest` 태그로 빌드한다.
+4. 러너가 `docker compose -f deploy/compose.yml up -d --wait`를 실행한다.
+
+레지스트리는 사용하지 않는다. 롤백은 `IMAGE_TAG=<이전 커밋 SHA> docker compose -f deploy/compose.yml up -d --wait`로 한다.
 
 ### 7.3 수집기 설치 절차
 
