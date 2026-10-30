@@ -1,0 +1,22 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: homeserver
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 화면 검사와 gradle build
+        run: docker build --progress=plain -f docker/Dockerfile --target build .

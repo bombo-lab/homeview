@@ -1,0 +1,45 @@
+name: cd
+
+on:
+  workflow_dispatch:
+    inputs:
+      server:
+        description: 배포할 서버 (러너 라벨)
+        type: choice
+        required: true
+        options:
+          - homeserver
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-homeview-${{ inputs.server }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ${{ inputs.server }}
+    timeout-minutes: 20
+    env:
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # 수동 실행은 main이 아닌 브랜치에서도 가능하다. 배포 전에 다시 검증한다.
+      - name: 화면 검사와 gradle build
+        run: docker build --progress=plain -f docker/Dockerfile --target build .
+
+      - name: 이미지 빌드
+        run: |
+          docker build --progress=plain -f docker/Dockerfile --target runtime \
+            -t "homeview-app:$IMAGE_TAG" -t "homeview-app:latest" .
+
+      - name: 배포
+        run: docker compose -f deploy/compose.yml up -d --wait --wait-timeout 180
+
+      - name: 실패 시 상태 출력
+        if: failure()
+        run: |
+          docker compose -f deploy/compose.yml ps
+          docker compose -f deploy/compose.yml logs --tail 100

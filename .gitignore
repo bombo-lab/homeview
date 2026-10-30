@@ -1,0 +1,11 @@
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+.kotlin/
+.idea/
+*.iml
+out/
+.DS_Store
+node_modules/
+web/dist/
+src/main/resources/static/
